@@ -506,9 +506,16 @@ if (lost && resultRoundId !== roundId) {
         game.activeNPC !== npc
       ) return;
 
-      const quest = getElement("quest");
+    const quest = getElement("quest");
 
-      if (!quest || resultOverlay) return;
+if (!quest) return;
+
+if (game.hearts <= 0) {
+    endGame(false);
+    return;
+}
+
+if (resultOverlay) return;
 
       const overlay = document.createElement("div");
       overlay.className = "hangman-result-overlay";
