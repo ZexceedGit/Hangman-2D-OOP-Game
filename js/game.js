@@ -91,6 +91,7 @@ const dialogue = {
   typingTimer: null
 };
 
+
 const getElement = id => document.getElementById(id);
 
 const setVisible = (id, visible) => {
@@ -324,11 +325,11 @@ const updateDialogueDistance = () => {
   }
 };
 
-/* ---------- HANGMAN QUEST ---------- */
 let feedbackRoundId = "";
 let feedbackGuessCount = 0;
 let resultRoundId = "";
 let resultTimer = null;
+let successTimer = null;
 let resultOverlay = null;
 
 const renderQuest = () => {
@@ -496,8 +497,8 @@ const renderQuest = () => {
   }
 
   // Display the result after Hank's animation
-  if ((won || lost) && resultRoundId !== roundId) {
-    resultRoundId = roundId;
+if (lost && resultRoundId !== roundId) {
+      resultRoundId = roundId;
 
     resultTimer = setTimeout(() => {
       if (
@@ -561,10 +562,74 @@ if (game.hearts <= 0) {
   }
 };
 
+
+const completeQuest = () => {
+  const npc = game.activeNPC;
+
+  if (!npc || !Round.s) return;
+
+  const points = calculateQuestScore(Round.triesLeft());
+
+  // Release the captive
+  npc.ft = performance.now() / 1000;
+  completeNPCQuest(npc);
+
+  // Award rewards
+  game.score += points;
+  game.keys++;
+  game.completed++;
+  game.candies += 5;
+
+  playQuestCompleteSound();
+
+  // Release particles
+  burst(
+    npc.x + (npc.bx || 40),
+    npc.by || GROUND_Y - 35,
+    "#ff6f9c",
+    24
+  );
+
+  showToast(
+    `${npc.free} +${points} points +5 candies +1 key`
+  );
+
+  // Clear the completed round
+  npc.round = null;
+  npc.failed = false;
+
+  clearQuestResult();
+
+  Round.s = null;
+  game.activeNPC = null;
+  game.mode = "play";
+
+  showScreen(null);
+  updateHUD();
+
+  // Show the NPC's completion dialogue
+  window.setTimeout(() => {
+    if (game.mode === "play") {
+      openDialogue(npc, npc.done);
+    }
+  }, 300);
+
+  // Check whether all quests are completed
+  if (areAllQuestsComplete()) {
+    window.setTimeout(() => endGame(true), 2200);
+  }
+};
+
+
 const clearQuestResult = () => {
   if (resultTimer !== null) {
     clearTimeout(resultTimer);
     resultTimer = null;
+  }
+
+  if (successTimer !== null) {
+    clearTimeout(successTimer);
+    successTimer = null;
   }
 
   resultOverlay?.remove();
@@ -663,7 +728,7 @@ const failQuest = () => {
 };
 
 const handleGuess = letter => {
-  if (game.mode !== "quest" || !Round.s) return;
+  if (game.mode !== "quest" || !Round.s || Round.over()) return;
 
   if (!/^[a-z]$/i.test(letter)) return;
 
@@ -677,11 +742,26 @@ const handleGuess = letter => {
     playWrongSound();
   }
 
-  renderQuest();
-
   if (Round.won()) {
-    renderQuest()
-    completeQuest();
+    renderQuest();
+
+    const npc = game.activeNPC;
+
+    clearTimeout(successTimer);
+
+    successTimer = window.setTimeout(() => {
+      successTimer = null;
+
+      if (
+        game.mode === "quest" &&
+        game.activeNPC === npc &&
+        Round.s &&
+        Round.won()
+      ) {
+        completeQuest();
+      }
+    }, 1100);
+
     return;
   }
 
@@ -690,7 +770,10 @@ const handleGuess = letter => {
     renderQuest();
     return;
   }
+
+  renderQuest();
 };
+
 
 
 const useHint = () => {

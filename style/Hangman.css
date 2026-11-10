@@ -1,3 +1,4 @@
+
 .game-stage {
     display: flex;
     flex-wrap: wrap;
@@ -6,21 +7,25 @@
     gap: 20px;
     width: 100%;
 }
+
 #quest {
     position: relative;
 }
+
 .word-area {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
 }
+
 .word-letters {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 5px;
 }
+
 .letter-slot {
     display: flex;
     align-items: center;
@@ -35,20 +40,24 @@
     font-weight: 700;
     text-transform: uppercase;
 }
+
 .letter-slot.lost {
     background: #fff2f3;
     color: var(--coral);
 }
+
 .keyboard {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 5px;
 }
+
 .keyboard-row {
     display: flex;
     gap: 4px;
 }
+
 .keyboard-key {
     width: clamp(24px, 6.4vw, 38px);
     height: clamp(30px, 6vw, 38px);
@@ -58,9 +67,11 @@
     font-size: 1rem;
     text-transform: uppercase;
 }
+
 .keyboard-key.hit {
     background: var(--mint);
 }
+
 .keyboard-key.miss {
     background: #b9c6e6;
     color: #6b78a8;
@@ -70,12 +81,12 @@
     text-decoration: line-through;
 }
 
-
 .hint-button {
     padding: 4px 12px;
     background: var(--sun);
     font-size: .85rem;
 }
+
 .hint-button:disabled {
     background: #d9dfee;
     color: #8b95b8;
@@ -83,7 +94,6 @@
     box-shadow: 0 4px 0 #8b95b8;
 }
 
-/* ts for dialog */
 .dialogue-box {
     position: absolute;
     left: 50%;
@@ -100,10 +110,12 @@
     line-height: 1.3;
     transform: translateX(-50%);
 }
+
 .dialogue-box b {
     display: block;
     color: var(--royal);
 }
+
 .dialogue-box i {
     display: block;
     margin-top: 3px;
@@ -111,6 +123,7 @@
     font-size: .78rem;
     font-style: normal;
 }
+
 .game-toast {
     position: absolute;
     top: 46px;
@@ -127,7 +140,6 @@
     transform: translateX(-50%);
 }
 
-
 .touch-controls {
     position: absolute;
     left: 0;
@@ -139,11 +151,13 @@
     padding: 0 12px;
     pointer-events: none;
 }
+
 .touch-control-group {
     display: flex;
     gap: 8px;
     pointer-events: auto;
 }
+
 .touch-control-group button {
     width: 52px;
     height: 52px;
@@ -153,9 +167,10 @@
 }
 
 .gallows {
-    width: 180px;
-    height: 180px;
     display: block;
+    width: 100%;
+    max-width: 200px;
+    height: auto;
     overflow: visible;
     image-rendering: pixelated;
 }
@@ -164,12 +179,16 @@
     shape-rendering: crispEdges;
 }
 
-.gallows .ink {
-    fill: #16257a;
+.gallows .g {
+    fill: var(--navy);
 }
 
 .gallows .gh {
     fill: #8b95b8;
+}
+
+.gallows .ink {
+    fill: #16257a;
 }
 
 .gallows .skin {
@@ -219,15 +238,7 @@
 
 .gallows .swing {
     transform-origin: 41px 13px;
-    animation: hankSwing 1.8s ease-in-out infinite;
-}
-
-.gallows.free .swing {
-    animation: hankFree .8s ease-out forwards;
-}
-
-.gallows.dead .swing {
-    animation: hankDead 1.2s ease-in forwards;
+    animation: hankSwing 1.8s ease-in-out infinite alternate;
 }
 
 @keyframes hankSwing {
@@ -240,14 +251,42 @@
     }
 }
 
-@keyframes hankFree {
-    0% {
+.gallows.free .rope {
+    display: none;
+}
+
+.gallows.free .swing {
+    animation: hankBob .3s steps(2, end) infinite;
+}
+
+.gallows.free .walker {
+    animation: walk 2.6s steps(26, end) .5s forwards;
+}
+
+@keyframes hankBob {
+    0%, 100% {
         transform: translateY(0);
     }
 
-    100% {
-        transform: translateY(-55px);
+    50% {
+        transform: translateY(-1.5px);
     }
+}
+
+@keyframes walk {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(48px);
+        opacity: 0;
+    }
+}
+
+.gallows.dead .swing {
+    animation: hankDead 1.2s ease-in forwards;
 }
 
 @keyframes hankDead {
@@ -263,6 +302,7 @@
         transform: rotate(18deg) translateY(8px);
     }
 }
+
 .hangman-result-overlay {
     position: absolute;
     inset: 0;

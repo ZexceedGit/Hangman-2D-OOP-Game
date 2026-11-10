@@ -91,7 +91,7 @@
         transform: translateX(48px);
     }
 }
-.dead .hangman-swing {
+.dead .swing {
     animation: none;
 }
 .dead .walker {
