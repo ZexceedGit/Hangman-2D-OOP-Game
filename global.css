@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+*, *::before, *::after {
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    text-decoration:none;
+    outline:none;
+}
+:root {
+    --sun: #ffd166;
+    --royal: #2a45c9;
+    --navy: #16257a;
+    --white: #fff;
+    --coral: #ff6f7d;
+    --mint: #5fe0b0;
+    --rope: #d9a066;
+    --brown: #a8582f;
+    --font: "Pixelify Sans", "Courier New", monospace;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: var(--page-bg, #dde6f3);
+    font-family: var(--font);
+    color: var(--navy);
+}
+p {
+    max-width: 46ch;
+    font-size: 1rem;
+    line-height: 1.35;
+}
+button {
+    padding: 8px 20px;
+    background: #fff;
+    color: var(--navy);
+    border: 3px solid var(--navy);
+    border-radius: 10px;
+    box-shadow: 0 4px 0 var(--navy);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+button:hover:not(:disabled) {
+    background: var(--sun);
+}
+button:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--navy);
+}
+button:focus-visible {
+    outline: 4px solid var(--sun);
+    outline-offset: 3px;
+}
+.text-button {
+    padding: 4px 8px;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    text-decoration: underline;
+}
+.info-panel {
+    display: grid;
+    gap: 4px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, .92);
+    border: 3px solid var(--navy);
+    border-radius: 12px;
+    box-shadow: 0 4px 0 var(--navy);
+    font-size: .92rem;
+    text-align: left;
+}
+.info-panel kbd {
+    padding: 0 5px;
+    background: var(--sun);
+    border: 2px solid var(--navy);
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 700;
+}
+.status-chip {
+    padding: 2px 12px;
+    background: #fff;
+    border: 3px solid var(--navy);
+    border-radius: 99px;
+    font-size: .9rem;
+    font-weight: 700;
+}
+.status-chip b {
+    color: var(--royal);
+}
+.pause-button {
+    position: absolute;
+    top: 36px;
+    right: 12px;
+    z-index: 3;
+    display: none;
+    padding: 1px 10px;
+    font-size: .8rem;
+    opacity: .9;
+    box-shadow: 0 3px 0 var(--navy);
+}
+.settings-options {
+    display: grid;
+    gap: 8px;
+    text-align: left;
+}
+.settings-options button {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: clamp(.8rem, 2.4vw, 1rem);
+}
+.settings-options b {
+    color: #c9394a;
+}
+.settings-options b.on {
+    color: #1a9d6b;
+}
+.reduce-motion *,
+.reduce-motion *::before {
+    animation: none !important;
+}
+.hide-scanlines .scanline-overlay {
+    display: none;
+}
+
+@media (max-width: 520px) {
+    .tutorial-grid,
+    .tutorial-info-grid {
+        grid-template-columns: 1fr;
+    }
+    .tutorial-step {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+@media (pointer: coarse) {
+    .touch-controls {
+        display: flex;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hangman-swing {
+        animation: none !important;
+    }
+}
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #12151c;
+    }
+}

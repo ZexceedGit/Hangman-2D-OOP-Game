@@ -1,0 +1,105 @@
+.hangman-art {
+    display: block;
+    width: 100%;
+    max-width: 200px;
+    shape-rendering: crispEdges;
+}
+.hangman-art .g {
+    fill: var(--navy);
+}
+.hangman-art .gh {
+    fill: #3a52c4;
+}
+.hangman-art .rope {
+    fill: var(--rope);
+}
+.hangman-art .skin {
+    fill: #ffd3a1;
+}
+.hangman-art .ink {
+    fill: var(--navy);
+}
+.hangman-art .white {
+    fill: #fff;
+}
+.hangman-art .drop {
+    fill: #7fc8ff;
+}
+.hangman-art .coral {
+    fill: var(--coral);
+}
+.hangman-art .shirt {
+    fill: var(--sun);
+}
+.hangman-art .pants {
+    fill: var(--royal);
+}
+.hangman-art .band {
+    fill: var(--coral);
+}
+.hangman-part {
+    opacity: 0;
+}
+.hangman-part.on {
+    opacity: 1;
+    animation: pop-in .35s steps(4);
+}
+@keyframes pop-in {
+    0% {
+        opacity: 0;
+    }
+    25% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+    75%,
+    100% {
+        opacity: 1;
+    }
+}
+.hangman-swing {
+    transform-origin: 42px 13px;
+    animation: swing 1.8s steps(4) infinite alternate;
+}
+@keyframes swing {
+    from {
+        transform: rotate(-2.5deg);
+    }
+
+    to {
+        transform: rotate(2.5deg);
+    }
+}
+.free .rope {
+    display: none;
+}
+.free .hangman-swing {
+    animation: bob .3s steps(2) infinite;
+}
+.free .walker {
+    animation: walk 2.6s steps(26) .5s forwards;
+}
+@keyframes bob {
+    50% {
+        transform: translateY(-1.5px);
+    }
+}
+@keyframes walk {
+    to {
+        transform: translateX(48px);
+    }
+}
+.dead .hangman-swing {
+    animation: none;
+}
+.dead .walker {
+    animation: rise 2.4s steps(12) .9s forwards;
+}
+@keyframes rise {
+    to {
+        transform: translateY(-34px);
+        opacity: 0;
+    }
+}

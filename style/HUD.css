@@ -1,0 +1,60 @@
+
+.hud-top,
+.hud-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    color: #fff;
+    font-size: clamp(.75rem, 2.4vw, 1.15rem);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow:
+        2px 0 var(--navy),
+        -2px 0 var(--navy),
+        0 2px var(--navy),
+        0 -2px var(--navy),
+        2px 2px var(--navy);
+
+    pointer-events: none;
+}
+.hud-top {
+    top: 0;
+}
+.hud-bottom {
+    bottom: 0;
+}
+.hud-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 12px;
+}
+.coin-icon {
+    width: 1.5em;
+    height: 1.5em;
+    background: #ffd23c;
+    border: 3px solid #b8741a;
+    border-radius: 50%;
+    box-shadow: inset -3px -3px 0 #f0a920;
+}
+#bar {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+#bar i {
+    width: clamp(10px, 2.6vw, 20px);
+    height: clamp(10px, 2.4vw, 16px);
+
+    background: #3b2a4a;
+    border: 2px solid var(--navy);
+}
+#bar i.on {
+    background: #ff8a4a;
+}

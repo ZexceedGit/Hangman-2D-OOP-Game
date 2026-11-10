@@ -1,0 +1,19 @@
+.game-title {
+    color: var(--royal);
+    font-size: clamp(2.2rem, 8vw, 4.6rem);
+    font-weight: 700;
+    line-height: .95;
+    text-shadow:
+        3px 3px 0 #fff,
+        6px 6px 0 rgba(22, 37, 122, .25);
+}
+.game-subtitle {
+    color: #fff;
+    font-size: clamp(.9rem, 2.6vw, 1.3rem);
+    font-weight: 700;
+    text-shadow:
+        2px 0 var(--navy),
+        -2px 0 var(--navy),
+        0 2px var(--navy),
+        0 -2px var(--navy);
+}

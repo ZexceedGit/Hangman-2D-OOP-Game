@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangman</title>
+    <link rel="stylesheet" href="global.css"> <!-- for global design -->
+    <link rel="stylesheet" href="./style/GameContainer.css"> <!-- for the canva and computer design -->
+    <link rel="stylesheet" href="./style/Typography.css"> <!-- self explanator -->
+    <link rel="stylesheet" href="./style/Menu.css"> <!-- Menu Design -->
+    <link rel="stylesheet" href="./style/Tutorial.css"> <!-- Tutorial Panel -->
+    <link rel="stylesheet" href="./style/HUD.css"> <!-- HUD Menu Design -->
+    <link rel="stylesheet" href="./style/SpeechBubble.css"> <!-- HUD Menu Design -->
+    <link rel="stylesheet" href="./style/Hangman.css"> <!-- HUD Menu Design -->
+    <link rel="stylesheet" href="./style/ResultPanel.css" > <!--End game modeal-->
+</head>
+<body>
+    
+<div class="game-console">
+    <div class="game-screen">
+
+        <canvas
+            class="game-canvas"
+            id="cv"
+            width="800"
+            height="450"
+            aria-label="Side-scrolling town where you meet villagers"
+        ></canvas>
+
+        <!-- Game HUD -->
+        <div class="hud-top" id="hud">
+            <div>
+                <span class="hud-item">
+                    <svg width="24" height="16" viewBox="0 0 12 8" shape-rendering="crispEdges">
+                        <rect x="0" y="2" width="3" height="4" fill="#ff6f9c"/>
+                        <rect x="9" y="2" width="3" height="4" fill="#ff6f9c"/>
+                        <rect x="3" y="0" width="6" height="8" fill="#ff6f9c"/>
+                        <rect x="5" y="0" width="1" height="8" fill="#fff"/>
+                    </svg>
+                    ×<b id="hC">00</b>
+                </span>
+
+                <span class="hud-item">
+                    TIME <b id="hT">00:00</b>
+                </span>
+
+                <span class="hud-item">
+                    <svg width="14" height="20" viewBox="0 0 8 11" shape-rendering="crispEdges">
+                        <rect x="1" y="0" width="6" height="5" fill="#ffd23c"/>
+                        <rect x="3" y="2" width="2" height="1" fill="#b8741a"/>
+                        <rect x="3" y="5" width="2" height="6" fill="#ffd23c"/>
+                        <rect x="5" y="8" width="2" height="1" fill="#ffd23c"/>
+                    </svg>
+                    ×<b id="hK">0</b>
+                </span>
+            </div>
+
+            <div>
+                SCORE <b id="hS">000000</b>
+            </div>
+        </div>
+
+        <!-- Quest and health HUD -->
+        <div class="hud-bottom" id="hud2">
+            <div>
+                QUESTS
+                <span id="bar"></span>
+            </div>
+
+            <div>
+                ♥ ×<b id="hH">3</b>
+            </div>
+        </div>
+
+        <!-- Pause button -->
+        <button
+            class="pause-button"
+            id="pauseBtn"
+            data-act="pause"
+            aria-label="Pause"
+        >
+            II
+        </button>
+
+        <!-- Dialogue and notifications -->
+        <div class="dialogue-box " id="dlg">
+            <b></b>
+            <span class="txt"></span>
+            <i></i>
+        </div>
+
+        <div class="game-toast" id="toast"></div>
+
+        <!-- Touch controls -->
+        <div class="touch-controls">
+            <div class="touch-control-group">
+                <button data-k="l" aria-label="Left">◀</button>
+                <button data-k="r" aria-label="Right">▶</button>
+            </div>
+
+            <div class="touch-control-group">
+                <button data-k="e" aria-label="Talk">E</button>
+                <button data-k="j" aria-label="Jump">▲</button>
+            </div>
+        </div>
+
+        <!-- ==============================
+             MAIN MENU
+        =============================== -->
+
+        <section id="menu" class="screen-view active">
+            <div class="menu-header">
+                <div class="menu-badge">★ 1 PLAYER ★</div>
+
+                <div class="game-title">Hangman</div>
+
+                <div class="menu-tagline">
+                    HANK’S LAST STAND · TOWN QUEST
+                </div>
+            </div>
+
+            <div class="menu-character-area">
+                <div class="character-art">
+                    <div id="menuArt"></div>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button
+                    class="menu-primary-button"
+                    data-act="start"
+                    id="startBtn"
+                >
+                    START GAME
+                </button>
+
+                <button
+                    class="menu-secondary-button"
+                    data-act="settings"
+                >
+                    SETTINGS
+                </button>
+
+                <div class="menu-best-score">
+                    BEST SCORE <b id="bestTxt">000000</b>
+                </div>
+
+                <div class="menu-footer">
+                    Press <kbd>Enter</kbd> to begin
+                </div>
+            </div>
+        </section>
+
+        <!-- ==============================
+             SETTINGS
+        =============================== -->
+
+        <section id="set" class="screen-view">
+            <div
+                class="content-panel"
+                role="dialog"
+                aria-labelledby="setH"
+            >
+                <h2 id="setH">SETTINGS</h2>
+
+                <div class="settings-options">
+                    <button data-act="tsound">
+                        Sound effects
+                        <b id="vSound">ON</b>
+                    </button>
+
+                    <button data-act="tscan">
+                        CRT scanlines
+                        <b id="vScan">ON</b>
+                    </button>
+
+                    <button data-act="tcalm">
+                        Reduce motion
+                        <b id="vCalm">OFF</b>
+                    </button>
+
+                    <button data-act="resetbest">
+                        Reset best score
+                        <b id="vReset">›</b>
+                    </button>
+                </div>
+
+                <div class="content-panel-buttons">
+                    <button
+                        class="panel-action-button primary"
+                        data-act="back"
+                    >
+                        ← BACK
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==============================
+             PAUSE MENU
+        =============================== -->
+
+        <section id="pause" class="screen-view ">
+            <div
+                class="content-panel"
+                role="dialog"
+                aria-labelledby="pauseH"
+            >
+                <h2 id="pauseH">PAUSED</h2>
+
+                <p class="tutorial-tip">
+                    Your progress is safe. Take a breather!
+                </p>
+
+                <div class="content-panel-buttons">
+                    <button
+                        class="panel-action-button"
+                        data-act="quit"
+                    >
+                        QUIT
+                    </button>
+
+                    <button
+                        class="panel-action-button primary"
+                        data-act="resume"
+                    >
+                        RESUME
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==============================
+             HOW TO PLAY
+        =============================== -->
+
+        <section id="tut" class="screen-view ">
+            <div
+                class="content-panel"
+                role="dialog"
+                aria-labelledby="tutH"
+            >
+                <h2 id="tutH">HOW TO PLAY</h2>
+
+                <div class="tutorial-grid">
+
+                    <!-- Step 1 -->
+                    <div class="tutorial-step">
+                        <h3>
+                            <span class="tutorial-step-number">1</span>
+                            EXPLORE
+                        </h3>
+
+                        <div class="tutorial-visual">
+                            <span class="tutorial-key">A</span>
+                            <span class="tutorial-key">D</span>
+                            <span class="tutorial-arrow">·</span>
+                            <span class="tutorial-key wide">W</span>
+                        </div>
+
+                        <p>
+                            Walk with A / D or arrows, jump with W or Space.
+                            Grab candies on the way!
+                        </p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="tutorial-step">
+                        <h3>
+                            <span class="tutorial-step-number">2</span>
+                            TALK
+                        </h3>
+
+                        <div class="tutorial-visual">
+                            <span class="tutorial-marker">!</span>
+                            <span class="tutorial-arrow">›</span>
+                            <span class="tutorial-key">E</span>
+                        </div>
+
+                        <p>
+                            Stand next to a villager and press E.
+                            Everyone has something stuck.
+                        </p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="tutorial-step">
+                        <h3>
+                            <span class="tutorial-step-number">3</span>
+                            SOLVE
+                        </h3>
+
+                        <div class="tutorial-visual">
+                            <span class="tutorial-letter">H</span>
+                            <span class="tutorial-letter">A</span>
+                            <span class="tutorial-letter"></span>
+                            <span class="tutorial-letter">K</span>
+                        </div>
+
+                        <p>
+                            Guess the hidden word to free it.
+                            Every wrong letter costs Hank a limb!
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Game information -->
+                <div class="tutorial-info-grid">
+
+                    <div class="tutorial-info-item">
+                        <span class="icon heart">♥</span>
+                        <span>3 hearts. Failing a word costs one.</span>
+                    </div>
+
+                    <div class="tutorial-info-item">
+                        <svg width="24" height="16" viewBox="0 0 12 8" shape-rendering="crispEdges">
+                            <rect x="0" y="2" width="3" height="4" fill="#ff6f9c"/>
+                            <rect x="9" y="2" width="3" height="4" fill="#ff6f9c"/>
+                            <rect x="3" y="0" width="6" height="8" fill="#ff6f9c"/>
+                            <rect x="5" y="0" width="1" height="8" fill="#fff"/>
+                        </svg>
+
+                        <span>5 candies buy a free hint.</span>
+                    </div>
+
+                    <div class="tutorial-info-item">
+                        <span class="icon star">★</span>
+                        <span>Free all 8 villagers to win.</span>
+                    </div>
+
+                </div>
+
+                <!-- Tutorial actions -->
+                <div class="content-panel-buttons">
+                    <button
+                        class="text-button"
+                        data-act="back"
+                    >
+                        ← Back
+                    </button>
+
+                    <button
+                        class="panel-action-button primary"
+                        data-act="go"
+                        id="goBtn"
+                    >
+                        LET’S GO!
+                    </button>
+                </div>
+
+                <p class="tutorial-footer">
+                    Enter = start · P = pause · Esc = back
+                </p>
+            </div>
+        </section>
+
+        <!-- ==============================
+             VILLAGER QUEST
+        =============================== -->
+
+        <section id="quest" class="screen-view">
+
+            <div class="quest-header">
+                <span class="status-chip" id="qWho"></span>
+
+                <span class="status-chip">
+                    Clue: <b id="qClue"></b>
+                </span>
+
+                <span class="status-chip">
+                    Candies: <b id="qCandy">0</b>
+                </span>
+
+                <button
+                    class="text-button"
+                    data-act="later"
+                >
+                    Later (Esc)
+                </button>
+            </div>
+
+            <div class="game-stage">
+
+                <div class="character-art">
+                    <div
+                        class="speech-bubble"
+                        id="bubble"
+                        aria-live="polite"
+                    >
+                        <b>Hank</b>
+                        <span class="txt"></span>
+                    </div>
+
+                    <div id="gameArt"></div>
+                </div>
+
+                <div class="word-area">
+                    <div class="word-letters" id="word"></div>
+
+                    <button
+                        class="hint-button"
+                        id="hintBtn"
+                    >
+                        Cheat code (costs 1 try)
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="keyboard" id="keys"></div>
+
+        </section>
+
+        <!-- ==============================
+             GAME END
+        =============================== -->
+
+        <section id="end" class="screen-view"></section>
+
+        <!-- CRT overlay -->
+        <div class="scanline-overlay"></div>
+
+    </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,64 @@
+/* this will be created dynamically through js*/
+.result-card {
+    width: min(400px, 94%);
+    padding: 14px 16px;
+    background: #f9c95b;
+    color: var(--brown);
+    border: 4px solid var(--brown);
+    border-radius: 10px;
+    box-shadow:
+        inset 0 0 0 4px #fbd878,
+        0 6px 0 #7a3d1e;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.result-card h2 {
+    margin-bottom: 6px;
+    font-size: clamp(1.3rem, 4vw, 1.9rem);
+    text-shadow: 2px 2px 0 #fbe19a;
+}
+.result-ribbon {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -8px 8px;
+    padding: 3px 10px;
+    background: #e8434f;
+    color: #fff3c0;
+    border: 3px solid #fff7;
+}
+.result-star {
+    color: #6b2f2f;
+}
+.result-star.on {
+    color: #ffd23c;
+    text-shadow: 1px 1px 0 #b8741a;
+}
+.result-stats {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: #f6bd45;
+    text-align: left;
+}
+.result-stats div {
+    display: flex;
+    justify-content: space-between;
+    font-size: clamp(.8rem, 2.4vw, 1rem);
+}
+.result-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+.result-button {
+    flex: 1;
+    background: #fbd23c;
+    color: var(--brown);
+    border: 3px solid var(--brown);
+    box-shadow: 0 4px 0 var(--brown);
+    letter-spacing: 2px;
+}
+.result-button:hover:not(:disabled) {
+    background: #ffe27a;
+}

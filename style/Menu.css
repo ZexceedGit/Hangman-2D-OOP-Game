@@ -1,0 +1,108 @@
+
+#menu {
+    justify-content: space-between;
+    gap: 0;
+    padding: clamp(10px, 3%, 22px) 12px clamp(8px, 2.4%, 16px);
+    background: linear-gradient(
+        rgba(120, 180, 245, .55),
+        rgba(190, 225, 255, .7)
+    );
+}
+.menu-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.menu-badge {
+    padding: 2px 12px;
+    background: var(--navy);
+    color: var(--sun);
+    border: 2px solid #fff;
+    border-radius: 99px;
+    font-size: clamp(.6rem, 1.7vw, .8rem);
+    letter-spacing: 3px;
+}
+
+#menu .game-title {
+    font-size: clamp(2.4rem, 9vw, 5rem);
+}
+.menu-tagline {
+    padding: 3px 18px;
+    background: var(--coral);
+    color: #fff;
+    border: 3px solid var(--navy);
+    box-shadow: 0 4px 0 var(--navy);
+    font-size: clamp(.7rem, 2.2vw, 1.05rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    transform: rotate(-1.5deg);
+}
+.menu-character-area {
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(10px, 3vw, 28px);
+    width: 100%;
+    min-height: 0;
+}
+.menu-character-area .character-art {
+    width: clamp(110px, 22vw, 190px);
+}
+.menu-character-area .speech-bubble {
+    max-width: 210px;
+    min-height: 3.6em;
+    font-size: clamp(.7rem, 1.9vw, .88rem);
+}
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.menu-primary-button {
+    padding: 8px clamp(26px, 6vw, 56px);
+    background: var(--sun);
+    border-radius: 14px;
+    font-size: clamp(1.1rem, 3.4vw, 1.7rem);
+    letter-spacing: 3px;
+    animation: pulse 1.2s steps(2) infinite;
+}
+.menu-primary-button:hover:not(:disabled) {
+    background: #ffe38f;
+}
+.menu-buttons .menu-secondary-button {
+    width: clamp(150px, 30vw, 210px);
+    padding: 5px 22px;
+    font-size: clamp(.8rem, 2.2vw, 1rem);
+    letter-spacing: 2px;
+}
+.menu-best-score {
+    padding: 1px 12px;
+    background: #fff;
+    color: var(--navy);
+    border: 2px solid var(--navy);
+    border-radius: 99px;
+    font-size: clamp(.62rem, 1.7vw, .82rem);
+    letter-spacing: 2px;
+}
+.menu-footer {
+    color: var(--navy);
+    opacity: .8;
+    font-size: clamp(.6rem, 1.6vw, .78rem);
+    letter-spacing: 1px;
+}
+.menu-footer kbd {
+    padding: 0 5px;
+    background: #fff;
+    border: 2px solid var(--navy);
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 700;
+}
+@keyframes pulse {
+    50% {
+        transform: translateY(-3px);
+    }
+}
