@@ -760,7 +760,7 @@ const handleGuess = letter => {
       ) {
         completeQuest();
       }
-    }, 1100);
+    }, 3200);
 
     return;
   }
@@ -854,19 +854,22 @@ const pauseGame = () => {
 };
 
 const endGame = victory => {
-  game.mode = "end";
+  if (game.mode === "end") return;
 
+  game.mode = "end";
   closeDialogue();
 
   const levelScore = game.score + game.candies * 10;
+
   const timeBonus = Math.max(
     0,
     Math.round((900 - game.elapsedTime * 3) / 5) * 5
   );
 
-  const stars =
-    game.hearts >= 3 ? 3 :
-    game.hearts === 2 ? 2 : 1;
+  const stars = victory
+    ? game.hearts >= 3 ? 3
+      : game.hearts === 2 ? 2 : 1
+    : 0;
 
   const starBonus = stars * 140;
 
@@ -878,28 +881,112 @@ const endGame = victory => {
 
   if (total > game.bestScore) {
     saveBestScore(total);
-    game.bestScore = Math.max(game.bestScore, total);
+    game.bestScore = total;
   }
 
-  const resultScore = getElement("resultScore");
-  const resultCoins = getElement("resultCoins");
-  const resultTime = getElement("resultTime");
+  const seconds = Math.floor(game.elapsedTime);
+  const formattedTime =
+    `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
 
-  if (resultScore) resultScore.textContent = pad(total, 6);
-  if (resultCoins) resultCoins.textContent = game.candies;
+  const end = getElement("end");
 
-  if (resultTime) {
-    const seconds = Math.floor(game.elapsedTime);
+  if (!end) return;
 
-    resultTime.textContent =
-      `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
-  }
+  const starHTML = [0, 1, 2].map(index => `
+    <span class="result-star ${index < stars ? "on" : ""}">★</span>
+  `).join("");
+
+  end.innerHTML = `
+    <div class="result-card">
+
+      <div class="result-ribbon">
+        <span>${victory ? "★ TOWN SAVED ★" : "GAME OVER"}</span>
+        <span>${victory ? "VICTORY!" : "TRY AGAIN"}</span>
+      </div>
+
+      <h2>${victory ? "YOU SAVED THE TOWN!" : "HANK'S LAST STAND"}</h2>
+
+      <div class="result-star-container">
+        ${starHTML}
+      </div>
+
+      <div class="result-stats">
+
+        <div>
+          <span>FINAL SCORE</span>
+          <b id="resultScore">${pad(total, 6)}</b>
+        </div>
+
+        <div>
+          <span>CANDIES COLLECTED</span>
+          <b id="resultCoins">${game.candies}</b>
+        </div>
+
+        <div>
+          <span>TIME</span>
+          <b id="resultTime">${formattedTime}</b>
+        </div>
+
+        <div>
+          <span>QUESTS COMPLETED</span>
+          <b>${game.completed}/8</b>
+        </div>
+
+        <div>
+          <span>HEARTS REMAINING</span>
+          <b>${game.hearts}</b>
+        </div>
+
+        ${victory ? `
+          <div>
+            <span>TIME BONUS</span>
+            <b>+${timeBonus}</b>
+          </div>
+
+          <div>
+            <span>STAR BONUS</span>
+            <b>+${starBonus}</b>
+          </div>
+        ` : ""}
+
+      </div>
+
+      <div class="result-buttons">
+
+        <button
+          class="result-button"
+          type="button"
+          id="resultRetry"
+        >
+          PLAY AGAIN
+        </button>
+
+        <button
+          class="result-button"
+          type="button"
+          id="resultMenu"
+        >
+          MAIN MENU
+        </button>
+
+      </div>
+
+    </div>
+  `;
+
+  getElement("resultRetry").addEventListener("click", () => {
+    startNewGame();
+  });
+
+  getElement("resultMenu").addEventListener("click", () => {
+    game.mode = "menu";
+    game.activeNPC = null;
+    Round.s = null;
+
+    showScreen("menu");
+  });
 
   showScreen("end");
-
-  showToast(
-    victory ? "All quests completed!" : "Game over!"
-  );
 };
 
 const showMenu = () => {
