@@ -3,7 +3,8 @@ import {
   GROUND_Y,
   INITIAL_HEARTS,
   INITIAL_SCORE,
-  CANVAS_WIDTH
+  CANVAS_WIDTH,
+   WORLD_WIDTH
 } from "./constants.js";
 
 import { NPCS, BOSS } from "./data/npcs.js";
@@ -93,7 +94,10 @@ export const game = {
   active: false,
   defeated: false,
   revealed: false,
-  revealStartedAt: null
+  revealStartedAt: null,
+  revealCutsceneActive: false,
+cameraPanFrom: null,
+cameraPanTarget: null
 }
 };
 const startBossQuest = () => {
@@ -444,9 +448,14 @@ const openDialogue = (npc, message) => {
         : "E · Take the quest     Esc · Later";
 }
   say(element, message);
-};
-const closeDialogue = (force = false) => {
-  if (dialogue.bossIntroActive && !force) return;
+};const closeDialogue = (force = false) => {
+  if (
+    !force &&
+    (
+      dialogue.bossIntroActive ||
+      (dialogue.npc && dialogue.typing)
+    )
+  ) return;
 
   window.clearInterval(dialogue.typingTimer);
 
@@ -463,7 +472,6 @@ const closeDialogue = (force = false) => {
     element.hidden = true;
   }
 };
-
 const openBossIntro = () => {
   dialogue.bossIntroActive = true;
   dialogue.bossIntroIndex = 0;
@@ -537,7 +545,7 @@ const interact = () => {
     advanceBossIntro();
     return;
   }
-
+if (dialogue.npc && dialogue.typing) return;
   const npc = getNearestNPC();
 
   if (!npc) {
@@ -570,10 +578,10 @@ const interact = () => {
   }
 
   openDialogue(npc, message);
-};
-const updateDialogueDistance = () => {
-  if (dialogue.bossIntroActive) return;
+};const updateDialogueDistance = () => {
   if (!dialogue.npc || !game.player) return;
+
+  if (dialogue.typing || dialogue.bossIntroActive) return;
 
   const playerCenter =
     game.player.x + game.player.width / 2;
@@ -1213,6 +1221,11 @@ const startNewGame = () => {
   game.boss.defeated = false;
   game.boss.revealed = false;
 game.boss.revealStartedAt = null;
+game.boss.revealed = false;
+game.boss.revealStartedAt = null;
+game.boss.revealCutsceneActive = false;
+game.boss.cameraPanFrom = null;
+game.boss.cameraPanTarget = null;
 
   game.mode = "play";
 
@@ -1380,7 +1393,7 @@ game.boss.active = false;
 };
 
 const showMenu = () => {
-  closeDialogue();
+  closeDialogue(true);
 
   game.mode = "menu";
   game.activeNPC = null;
@@ -1501,7 +1514,14 @@ const handleAction = action => {
 
 const updateGame = deltaTime => {
   if (game.mode !== "play" || !game.player) return;
-
+if (
+  game.boss.revealCutsceneActive ||
+  dialogue.bossIntroActive ||
+  (dialogue.npc && dialogue.typing)
+) {
+  updateFX(deltaTime);
+  return;
+}
   if (dialogue.bossIntroActive) {
     updateFX(deltaTime);
     return;
@@ -1527,19 +1547,31 @@ const updateGame = deltaTime => {
 
   updateHUD();
 };
-
 const renderGame = time => {
-  const bossScreenX = BOSS.x - camera.x;
+  const initialBossScreenX = BOSS.x - camera.x;
 
-  const bossInView =
+  const bossVisible =
     game.boss.unlocked &&
     !game.boss.defeated &&
-    bossScreenX > -180 &&
-    bossScreenX < CANVAS_WIDTH + 180;
+    initialBossScreenX > 80 &&
+    initialBossScreenX < CANVAS_WIDTH - 80;
 
-  if (bossInView && !game.boss.revealed) {
+  if (bossVisible && !game.boss.revealed) {
     game.boss.revealed = true;
     game.boss.revealStartedAt = time;
+    game.boss.revealCutsceneActive = true;
+
+    game.boss.cameraPanFrom = camera.x;
+
+    const maxCameraX = Math.max(0, WORLD_WIDTH - CANVAS_WIDTH);
+
+    game.boss.cameraPanTarget = Math.max(
+      0,
+      Math.min(
+        maxCameraX,
+        BOSS.x - CANVAS_WIDTH * 0.62
+      )
+    );
   }
 
   const revealElapsed =
@@ -1547,12 +1579,31 @@ const renderGame = time => {
       ? 0
       : Math.max(0, time - game.boss.revealStartedAt);
 
+  // Cinematic camera pan
+  if (
+    game.boss.revealed &&
+    game.boss.cameraPanFrom !== null &&
+    revealElapsed < 2800
+  ) {
+    const progress = Math.min(1, revealElapsed / 1300);
+    const eased = progress * progress * (3 - 2 * progress);
+
+    camera.x =
+      game.boss.cameraPanFrom +
+      (game.boss.cameraPanTarget - game.boss.cameraPanFrom) * eased;
+  }
+
+  if (game.boss.revealed && revealElapsed >= 2800) {
+    game.boss.revealCutsceneActive = false;
+  }
+
   const bossEntryProgress = game.boss.revealed
     ? Math.min(1, revealElapsed / 1500)
     : 0;
 
+  // Keep night colors vibrant instead of completely darkening the map
   const night = game.boss.revealed
-    ? Math.min(1, revealElapsed / 2400)
+    ? Math.min(0.68, (revealElapsed / 2400) * 0.68)
     : 0;
 
   drawEnvironment({
@@ -1578,8 +1629,9 @@ const renderGame = time => {
 
   drawFX();
 };
-
 const gameLoop = time => {
+  animationFrame = requestAnimationFrame(gameLoop);
+
   const deltaTime = previousTime
     ? Math.min(time - previousTime, 50)
     : 16;
@@ -1588,8 +1640,6 @@ const gameLoop = time => {
 
   updateGame(deltaTime);
   renderGame(time);
-
-  animationFrame = requestAnimationFrame(gameLoop);
 };
 /* ---------- EVENT CONNECTION ---------- */
 
