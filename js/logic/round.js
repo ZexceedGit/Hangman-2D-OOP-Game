@@ -14,8 +14,8 @@ export const Round = {
   s: null,
 
   make(n) {
-    const bonus = Run.level - 1;
-    const fits = (word) =>
+      const bonus = n.cat === "Boss" ? 0 : Run.level - 1;    
+      const fits = (word) =>
       word[0] === n.cat && !Run.used.includes(word[1]);
 
     let pool = WORDS.filter(
@@ -39,8 +39,8 @@ export const Round = {
     Run.used.push(selected[1]);
 
     return {
-      clue: selected[0],
-      word: selected[1],
+      clue: selected[2] || n.clue || selected[0],   
+         word: selected[1],
       guessed: [],
       misses: 0
     };

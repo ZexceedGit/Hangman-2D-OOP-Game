@@ -1,7 +1,7 @@
 // character rendering
 
 import { ctx, camera } from "./canvas.js";
-import { NPCS } from "../data/npcs.js";
+import { NPCS, BOSS } from "../data/npcs.js";
 import { GROUND_Y } from "../constants.js";
 
 const rc = (x, y, w, h, c) => {
@@ -188,19 +188,153 @@ export const drawNPC = (
 
   ctx.textAlign = "left";
 };
-
-export const drawNPCs = (player, mode = "play", dialogueOpen = false) => {
+export const drawNPCs = (
+  player,
+  mode = "play",
+  dialogueOpen = false,
+  bossUnlocked = false,
+  bossDefeated = false,
+  bossEntryProgress = 1
+) => {
   if (!player) return;
 
   NPCS.forEach(npc => {
-    drawNPC(
-      npc,
+    drawNPC(npc, player.x, mode, dialogueOpen);
+  });
+
+  if (bossUnlocked && !bossDefeated) {
+    drawBoss(
       player.x,
       mode,
-      dialogueOpen
+      dialogueOpen,
+      performance.now() / 1000,
+      bossEntryProgress
     );
-  });
+  }
 };
+export const drawBoss = (
+  playerX,
+  mode = "play",
+  dialogueOpen = false,
+  time = 0,
+  entryProgress = 1
+) => {
+  const sx = px(BOSS.x);
+  const y = GROUND_Y;
+
+  if (sx < -180 || sx > 980) return;
+
+  const progress = Math.max(0, Math.min(1, entryProgress));
+  const eased = 1 - Math.pow(1 - progress, 3);
+
+  const drop = (1 - eased) * 430;
+  const bob = progress >= 1 ? Math.sin(time * 2) * 2 : 0;
+  const bossY = y + bob - drop;
+
+  // Ground shadow
+  if (progress > 0.75) {
+    const shadowScale = (progress - 0.75) / 0.25;
+
+    rc(
+      sx - 35 * shadowScale,
+      y - 5,
+      70 * shadowScale,
+      5,
+      `rgba(23,19,38,${shadowScale * 0.65})`
+    );
+  }
+
+  drawBossPixelArt(sx, bossY, 1.5);
+
+  // Crown marker and name appear after the landing
+  if (progress >= 0.9) {
+    rc(sx - 11, bossY - 248, 22, 4, "#ffd166");
+    rc(sx - 9, bossY - 256, 5, 9, "#ffd166");
+    rc(sx - 2, bossY - 263, 5, 16, "#ffd166");
+    rc(sx + 5, bossY - 256, 5, 9, "#ffd166");
+
+    ctx.textAlign = "center";
+    ctx.font = '700 18px "Pixelify Sans", monospace';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#16257a";
+
+    ctx.strokeText(
+      "THE HANGMAN KING",
+      sx,
+      bossY - 220
+    );
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(
+      "THE HANGMAN KING",
+      sx,
+      bossY - 220
+    );
+  }
+
+  const distance = Math.abs(BOSS.x - (playerX + 12));
+
+  if (
+    progress >= 1 &&
+    mode === "play" &&
+    distance < 115 &&
+    !dialogueOpen
+  ) {
+    rc(sx - 48, y - 270, 96, 24, "#ffffff");
+
+    ctx.strokeStyle = "#16257a";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(sx - 47, y - 269, 94, 22);
+
+    ctx.font = '700 13px "Pixelify Sans", monospace';
+    ctx.fillStyle = "#16257a";
+    ctx.fillText("E · Challenge", sx, y - 254);
+  }
+
+  ctx.textAlign = "left";
+};
+export const bossSVG = () => `
+  <svg class="boss-sprite" viewBox="0 0 100 130"
+       role="img" aria-label="The Hangman King">
+
+    <g shape-rendering="crispEdges">
+
+      <rect x="20" y="119" width="60" height="5" fill="#171326"/>
+      <rect x="27" y="72" width="46" height="43" fill="#2b1b3d"/>
+      <rect x="18" y="78" width="18" height="28" fill="#171326"/>
+      <rect x="64" y="78" width="18" height="28" fill="#171326"/>
+
+      <rect x="32" y="57" width="36" height="36" fill="#7b3f9e"/>
+      <rect x="27" y="67" width="46" height="43" fill="#2b1b3d"/>
+      <rect x="34" y="91" width="32" height="7" fill="#c83cff"/>
+      <rect x="43" y="66" width="14" height="28" fill="#7b3f9e"/>
+
+      <rect x="36" y="29" width="28" height="31" fill="#b58ac9"/>
+      <rect x="31" y="35" width="38" height="20" fill="#7b3f9e"/>
+      <rect x="35" y="40" width="8" height="6" fill="#ffffff"/>
+      <rect x="57" y="40" width="8" height="6" fill="#ffffff"/>
+      <rect x="38" y="42" width="4" height="4" fill="#c83cff"/>
+      <rect x="58" y="42" width="4" height="4" fill="#c83cff"/>
+      <rect x="43" y="53" width="14" height="3" fill="#171326"/>
+
+      <rect x="31" y="25" width="38" height="6" fill="#ffd166"/>
+      <rect x="31" y="15" width="8" height="12" fill="#ffd166"/>
+      <rect x="46" y="7" width="8" height="20" fill="#ffd166"/>
+      <rect x="61" y="15" width="8" height="12" fill="#ffd166"/>
+      <rect x="48" y="16" width="4" height="6" fill="#c83cff"/>
+
+      <rect x="12" y="64" width="7" height="41" fill="#8b5a2b"/>
+      <rect x="7" y="54" width="17" height="14" fill="#c83cff"/>
+      <rect x="11" y="49" width="9" height="5" fill="#ffd166"/>
+      <rect x="14" y="38" width="3" height="11" fill="#ffd166"/>
+      <rect x="9" y="42" width="13" height="3" fill="#ffd166"/>
+
+      <rect x="27" y="110" width="18" height="7" fill="#171326"/>
+      <rect x="55" y="110" width="18" height="7" fill="#171326"/>
+
+    </g>
+  </svg>
+`;
 
 const R = (x, y, w, h, c = "g") =>
   `<rect class="${c}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
@@ -317,7 +451,7 @@ export const hankSVG = () => {
 };
 
 export const poseHank = (box, parts, mood, state = "") => {
-  const svg = box.firstElementChild;
+const svg = box.querySelector(".gallows");
   if (!svg) return;
 
   svg.querySelectorAll(".part").forEach(part => {
@@ -365,4 +499,55 @@ export const say = (element, text) => {
       clearInterval(element._t);
     }
   }, 22);
+};
+
+const drawBossPixelArt = (x, baseline, scale = 1.5) => {
+  ctx.save();
+
+  ctx.translate(
+    x - 50 * scale,
+    baseline - 124 * scale
+  );
+
+  ctx.scale(scale, scale);
+
+  const p = (x, y, w, h, color) =>
+    rc(x, y, w, h, color);
+
+  p(20, 119, 60, 5, "#171326");
+
+  p(27, 72, 46, 43, "#2b1b3d");
+  p(18, 78, 18, 28, "#171326");
+  p(64, 78, 18, 28, "#171326");
+
+  p(32, 57, 36, 36, "#7b3f9e");
+  p(27, 67, 46, 43, "#2b1b3d");
+  p(34, 91, 32, 7, "#c83cff");
+  p(43, 66, 14, 28, "#7b3f9e");
+
+  p(36, 29, 28, 31, "#b58ac9");
+  p(31, 35, 38, 20, "#7b3f9e");
+
+  p(35, 40, 8, 6, "#ffffff");
+  p(57, 40, 8, 6, "#ffffff");
+  p(38, 42, 4, 4, "#c83cff");
+  p(58, 42, 4, 4, "#c83cff");
+  p(43, 53, 14, 3, "#171326");
+
+  p(31, 25, 38, 6, "#ffd166");
+  p(31, 15, 8, 12, "#ffd166");
+  p(46, 7, 8, 20, "#ffd166");
+  p(61, 15, 8, 12, "#ffd166");
+  p(48, 16, 4, 6, "#c83cff");
+
+  p(12, 64, 7, 41, "#8b5a2b");
+  p(7, 54, 17, 14, "#c83cff");
+  p(11, 49, 9, 5, "#ffd166");
+  p(14, 38, 3, 11, "#ffd166");
+  p(9, 42, 13, 3, "#ffd166");
+
+  p(27, 110, 18, 7, "#171326");
+  p(55, 110, 18, 7, "#171326");
+
+  ctx.restore();
 };
