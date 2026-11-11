@@ -2,10 +2,11 @@
 import {
   GROUND_Y,
   INITIAL_HEARTS,
-  INITIAL_SCORE
+  INITIAL_SCORE,
+  CANVAS_WIDTH
 } from "./constants.js";
 
-import { NPCS } from "./data/npcs.js";
+import { NPCS, BOSS } from "./data/npcs.js";
 import { PLATS } from "./data/world.js";
 
 import { Round } from "./logic/round.js";
@@ -31,7 +32,8 @@ import {
 
 import {
   initializeCanvas,
-  updateCamera
+  updateCamera,
+  camera
 } from "./engine/canvas.js";
 
 import { drawEnvironment } from "./engine/drawing.js";
@@ -40,6 +42,7 @@ import {
   drawPlayer,
   drawNPCs,
   hankSVG,
+  bossSVG,
   poseHank,
   MOOD
 } from "./engine/characters.js";
@@ -79,16 +82,182 @@ export const game = {
   elapsedTime: 0,
   bestScore: 0,
   settings: {},
-  activeNPC: null
+  activeNPC: null,
+ boss: {
+  unlocked: false,
+  hp: BOSS.maxHP,
+  maxHP: BOSS.maxHP,
+  round: null,
+  timeLeft: BOSS.timeLimit,
+  timer: null,
+  active: false,
+  defeated: false,
+  revealed: false,
+  revealStartedAt: null
+}
+};
+const startBossQuest = () => {
+  if (
+    !game.boss.unlocked ||
+    game.boss.defeated ||
+    game.boss.active
+  ) return;
+
+  clearQuestResult();
+  closeDialogue();
+
+  game.boss.active = true;
+  game.boss.hp = BOSS.maxHP;
+
+  game.activeNPC = BOSS;
+  game.mode = "boss";
+
+  const art = getElement("gameArt");
+
+  if (art) {
+    art.innerHTML = hankSVG();
+    poseHank(art, 0, MOOD[0]);
+  }
+
+  const display = getElement("bossDisplay");
+
+  if (display) {
+    display.innerHTML = `
+      <div class="boss-side-info">
+        <strong>THE HANGMAN KING</strong>
+
+        <div class="boss-health-track">
+          <div id="bossHPFill"></div>
+        </div>
+
+        <span id="bossHPText">${BOSS.maxHP} / ${BOSS.maxHP} HP</span>
+        <span id="bossTimerText">40 SECONDS</span>
+      </div>
+
+      <div class="boss-side-art">
+        ${bossSVG()}
+      </div>
+    `;
+
+    display.hidden = false;
+  }
+
+  getElement("gameStage")?.classList.add("boss-fight-layout");
+  getElement("quest")?.classList.add("boss-mode-quest");
+
+  showScreen("quest");
+  closeDialogue(true);
+  startBossRound();
 };
 
+const startBossRound = () => {
+  if (!game.boss.active || game.mode !== "boss") return;
+
+  game.boss.round = Round.make(BOSS);
+  game.boss.round.hintsUsed = 0;
+  Round.s = game.boss.round;
+
+  startBossTimer();
+  renderQuest();
+};
+
+const startBossTimer = () => {
+  clearInterval(game.boss.timer);
+
+  game.boss.timeLeft = BOSS.timeLimit;
+
+  game.boss.timer = window.setInterval(() => {
+    if (game.mode !== "boss" || !game.boss.active) {
+      clearInterval(game.boss.timer);
+      game.boss.timer = null;
+      return;
+    }
+
+    game.boss.timeLeft--;
+
+    renderQuest();
+
+    if (game.boss.timeLeft <= 0) {
+      bossTimeout();
+    }
+  }, 1000);
+};
+
+const bossRoundWon = () => {
+  clearInterval(game.boss.timer);
+  game.boss.timer = null;
+
+  clearTimeout(successTimer);
+  successTimer = null;
+
+  game.boss.hp--;
+
+  bossDamageAnimation();
+
+  renderQuest();
+
+  if (game.boss.hp <= 0) {
+    defeatBoss();
+    return;
+  }
+
+  showToast(`BOSS DAMAGED! ${game.boss.hp}/${BOSS.maxHP} HP`);
+
+  window.setTimeout(() => {
+    if (game.mode === "boss" && game.boss.active) {
+      startBossRound();
+    }
+  }, 1200);
+};
+const bossTimeout = () => {
+  clearInterval(game.boss.timer);
+  game.boss.timer = null;
+
+  game.hearts = Math.max(0, game.hearts - 1);
+
+  showToast("THE HANGMAN KING ATTACKS! -1 HEART");
+
+  updateHUD();
+
+  if (game.hearts <= 0) {
+    game.boss.active = false;
+    endGame(false);
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (game.mode === "boss" && game.boss.active) {
+      startBossRound();
+    }
+  }, 1000);
+};
+
+const defeatBoss = () => {
+  clearInterval(game.boss.timer);
+  game.boss.timer = null;
+
+  game.boss.hp = 0;
+  game.boss.active = false;
+  game.boss.defeated = true;
+
+  game.activeNPC = null;
+  game.boss.round = null;
+  Round.s = null;
+
+  showToast("THE HANGMAN KING HAS FALLEN!");
+
+  endGame(true);
+};
 let animationFrame = null;
 let previousTime = 0;
 let questFinishTimer = null;
 
 const dialogue = {
   npc: null,
-  typingTimer: null
+  typingTimer: null,
+  typing: false,
+  bossIntroActive: false,
+  bossIntroIndex: 0
 };
 
 
@@ -196,29 +365,57 @@ const showToast = message => {
 };
 
 /* ---------- DIALOGUE ---------- */
-
 const say = (element, message) => {
   if (!element) return;
 
   window.clearInterval(dialogue.typingTimer);
 
   const textElement = element.querySelector(".txt");
-
-  if (!textElement) {
-    element.textContent = message;
-    return;
-  }
+  if (!textElement) return;
 
   let index = 0;
+  dialogue.typing = true;
   textElement.textContent = "";
+
+  const updateInstruction = () => {
+    if (!dialogue.bossIntroActive) return;
+
+    const instruction = element.querySelector("i");
+
+    if (instruction) {
+      const lastLine =
+        dialogue.bossIntroIndex >= BOSS.introLines.length - 1;
+
+      instruction.textContent = dialogue.typing
+        ? "THE KING IS SPEAKING..."
+        : lastLine
+          ? "E · BEGIN THE BATTLE"
+          : "E · CONTINUE";
+    }
+  };
+
+  const finishTyping = () => {
+    window.clearInterval(dialogue.typingTimer);
+    dialogue.typingTimer = null;
+    dialogue.typing = false;
+    textElement.textContent = message;
+    updateInstruction();
+  };
+
+  if (!message.length) {
+    finishTyping();
+    return;
+  }
 
   dialogue.typingTimer = window.setInterval(() => {
     textElement.textContent = message.slice(0, ++index);
 
     if (index >= message.length) {
-      window.clearInterval(dialogue.typingTimer);
+      finishTyping();
     }
   }, 22);
+
+  updateInstruction();
 };
 
 const openDialogue = (npc, message) => {
@@ -239,19 +436,25 @@ const openDialogue = (npc, message) => {
   }
 
   if (instruction) {
-    instruction.textContent =
-      npc.state === 2
+  instruction.textContent =
+    npc === BOSS
+      ? "E · Begin the battle     Esc · Later"
+      : npc.state === 2
         ? "E · Chat     Esc · Close"
         : "E · Take the quest     Esc · Later";
-  }
-
+}
   say(element, message);
 };
+const closeDialogue = (force = false) => {
+  if (dialogue.bossIntroActive && !force) return;
 
-const closeDialogue = () => {
   window.clearInterval(dialogue.typingTimer);
 
+  dialogue.typingTimer = null;
+  dialogue.typing = false;
   dialogue.npc = null;
+  dialogue.bossIntroActive = false;
+  dialogue.bossIntroIndex = 0;
 
   const element = getElement("dlg");
 
@@ -259,6 +462,44 @@ const closeDialogue = () => {
     element.style.display = "none";
     element.hidden = true;
   }
+};
+
+const openBossIntro = () => {
+  dialogue.bossIntroActive = true;
+  dialogue.bossIntroIndex = 0;
+
+  openDialogue(BOSS, BOSS.introLines[0]);
+
+  const element = getElement("dlg");
+  const instruction = element?.querySelector("i");
+
+  if (instruction) {
+    instruction.textContent = "THE KING IS SPEAKING...";
+  }
+};
+
+const advanceBossIntro = () => {
+  if (!dialogue.bossIntroActive || dialogue.typing) return;
+
+  const lastLine =
+    dialogue.bossIntroIndex >= BOSS.introLines.length - 1;
+
+  if (!lastLine) {
+    dialogue.bossIntroIndex++;
+
+    const element = getElement("dlg");
+
+    say(
+      element,
+      BOSS.introLines[dialogue.bossIntroIndex]
+    );
+
+    return;
+  }
+
+  dialogue.bossIntroActive = false;
+  closeDialogue(true);
+  startBossQuest();
 };
 
 const getNearestNPC = () => {
@@ -279,17 +520,34 @@ const getNearestNPC = () => {
     }
   });
 
+  if (game.boss.unlocked && !game.boss.defeated) {
+    const distance = Math.abs(playerCenter - BOSS.x);
+
+    if (distance < 115 && distance < nearestDistance) {
+      nearest = BOSS;
+    }
+  }
+
   return nearest;
 };
-
 const interact = () => {
   if (game.mode !== "play") return;
+
+  if (dialogue.bossIntroActive) {
+    advanceBossIntro();
+    return;
+  }
 
   const npc = getNearestNPC();
 
   if (!npc) {
     closeDialogue();
     showToast("There is nobody nearby.");
+    return;
+  }
+
+  if (npc === BOSS) {
+    openBossIntro();
     return;
   }
 
@@ -313,8 +571,8 @@ const interact = () => {
 
   openDialogue(npc, message);
 };
-
 const updateDialogueDistance = () => {
+  if (dialogue.bossIntroActive) return;
   if (!dialogue.npc || !game.player) return;
 
   const playerCenter =
@@ -362,15 +620,34 @@ const renderQuest = () => {
     resultRoundId = "";
   }
 
-  if (who) {
-    who.textContent = npc.goal || npc.name;
+  const isBoss = npc === BOSS;
+
+if (who) {
+  who.textContent = isBoss
+    ? `${BOSS.name} · ${game.boss.hp}/${BOSS.maxHP} HP`
+    : npc.goal || npc.name;
+}
+
+if (clue) {
+  clue.textContent = isBoss
+    ? `${Round.s.clue} · ${Round.s.word.length} letters · ${game.boss.timeLeft}s`
+    : `${Round.s.clue} · ${Round.s.word.length} letters`;
+}
+
+if (isBoss) {
+  const hpFill = getElement("bossHPFill");
+  const hpText = getElement("bossHPText");
+
+  if (hpFill) {
+    hpFill.style.width =
+      `${(game.boss.hp / BOSS.maxHP) * 100}%`;
   }
 
-  if (clue) {
-    clue.textContent =
-      `${Round.s.clue} · ${Round.s.word.length} letters`;
+  if (hpText) {
+    hpText.textContent =
+      `${game.boss.hp} / ${BOSS.maxHP} HP`;
   }
-
+}
   if (candy) {
     candy.textContent = game.candies;
   }
@@ -378,7 +655,8 @@ const renderQuest = () => {
   const won = Round.won();
   const lost = Round.lost();
 
-  // Hank's feedback
+
+  // ts fro hangman dialogue
   if (guessedLetters.length > feedbackGuessCount) {
     const letter = guessedLetters[guessedLetters.length - 1];
     const correct = Round.s.word.toLowerCase().includes(letter.toLowerCase());
@@ -429,8 +707,17 @@ const renderQuest = () => {
       const slot = document.createElement("span");
       const guessed = guessedLetters.includes(letter);
 
-      slot.className =
-        `letter-slot${lost && !guessed ? " lost" : ""}`;
+     const revealedByBoss =
+  isBoss &&
+  guessed &&
+  Round.s.revealedLetter === letter;
+
+slot.className =
+  `letter-slot${lost && !guessed ? " lost" : ""}`;
+
+if (revealedByBoss) {
+  slot.classList.add("hint-revealed");
+}
 
       slot.textContent =
         guessed || lost ? letter.toUpperCase() : "";
@@ -470,8 +757,19 @@ const renderQuest = () => {
       keys.appendChild(rowElement);
     });
   }
+if (hintButton) {
+  if (isBoss) {
+    const hintAvailable = (Round.s.hintsUsed || 0) < 1;
 
-  if (hintButton) {
+    hintButton.textContent = hintAvailable
+      ? "REVEAL ONE LETTER · FREE"
+      : "HINT ALREADY USED";
+
+    hintButton.disabled =
+      Round.over() ||
+      Round.hidden().length <= 1 ||
+      !hintAvailable;
+  } else {
     const canPay = game.candies >= 5;
 
     hintButton.textContent = canPay
@@ -483,21 +781,23 @@ const renderQuest = () => {
       Round.hidden().length <= 1 ||
       (!canPay && Round.triesLeft() <= 1);
   }
-
+}
   // Update Hank's appearance
   const art = getElement("gameArt");
 
   if (art) {
-    poseHank(
+   poseHank(
       art,
       won ? 6 : Round.s.misses,
       won ? "happy" : MOOD[Round.s.misses],
-      won ? "free" : lost ? "dead" : ""
+      game.mode === "boss"
+        ? ""
+        : won ? "free" : lost ? "dead" : ""
     );
   }
 
   // Display the result after Hank's animation
-if (lost && resultRoundId !== roundId) {
+if (lost && game.mode == "quest" && resultRoundId !== roundId) {
       resultRoundId = roundId;
 
     resultTimer = setTimeout(() => {
@@ -568,8 +868,6 @@ if (game.hearts <= 0) {
     }, lost ? 1300 : 450);
   }
 };
-
-
 const completeQuest = () => {
   const npc = game.activeNPC;
 
@@ -580,6 +878,12 @@ const completeQuest = () => {
   // Release the captive
   npc.ft = performance.now() / 1000;
   completeNPCQuest(npc);
+
+  const allQuestsDone = areAllQuestsComplete();
+
+  if (allQuestsDone) {
+    game.boss.unlocked = true;
+  }
 
   // Award rewards
   game.score += points;
@@ -605,6 +909,9 @@ const completeQuest = () => {
   npc.round = null;
   npc.failed = false;
 
+  clearTimeout(successTimer);
+  successTimer = null;
+
   clearQuestResult();
 
   Round.s = null;
@@ -614,19 +921,24 @@ const completeQuest = () => {
   showScreen(null);
   updateHUD();
 
-  // Show the NPC's completion dialogue
+  // Show NPC completion dialogue
   window.setTimeout(() => {
     if (game.mode === "play") {
       openDialogue(npc, npc.done);
     }
   }, 300);
 
-  // Check whether all quests are completed
-  if (areAllQuestsComplete()) {
-    window.setTimeout(() => endGame(true), 2200);
+  // Unlock notification
+  if (allQuestsDone) {
+    window.setTimeout(() => {
+      if (game.boss.unlocked && !game.boss.defeated) {
+        showToast(
+          "THE HANGMAN KING HAS APPEARED! GO TO THE END OF THE MAP!"
+        );
+      }
+    }, 2300);
   }
 };
-
 
 const clearQuestResult = () => {
   if (resultTimer !== null) {
@@ -679,8 +991,16 @@ const startQuest = (npc, fresh = false) => {
   const art = getElement("gameArt");
 
   if (art) {
-    art.innerHTML = hankSVG();
+const bossDisplay = getElement("bossDisplay");
 
+if (bossDisplay) {
+  bossDisplay.hidden = true;
+  bossDisplay.innerHTML = "";
+}
+
+getElement("gameStage")?.classList.remove("boss-fight-layout");
+getElement("quest")?.classList.remove("boss-mode-quest");
+art.innerHTML = hankSVG();
     poseHank(
       art,
       0,
@@ -733,9 +1053,14 @@ const failQuest = () => {
 
   updateHUD();
 };
-
 const handleGuess = letter => {
-  if (game.mode !== "quest" || !Round.s || Round.over()) return;
+  const isBoss = game.mode === "boss";
+
+  if (
+    (game.mode !== "quest" && !isBoss) ||
+    !Round.s ||
+    Round.over()
+  ) return;
 
   if (!/^[a-z]$/i.test(letter)) return;
 
@@ -752,39 +1077,83 @@ const handleGuess = letter => {
   if (Round.won()) {
     renderQuest();
 
-    const npc = game.activeNPC;
-
     clearTimeout(successTimer);
+
+    const winningRound = Round.s;
+    const winningNPC = game.activeNPC;
 
     successTimer = window.setTimeout(() => {
       successTimer = null;
 
       if (
+        Round.s !== winningRound ||
+        !Round.won()
+      ) return;
+
+      if (isBoss && game.mode === "boss" && game.boss.active) {
+        bossRoundWon();
+        return;
+      }
+
+      if (
         game.mode === "quest" &&
-        game.activeNPC === npc &&
-        Round.s &&
-        Round.won()
+        game.activeNPC === winningNPC &&
+        winningNPC
       ) {
         completeQuest();
       }
-    }, 3200);
+    }, isBoss ? 1200 : 2500);
 
     return;
   }
 
   if (Round.lost()) {
-    failQuest();
     renderQuest();
+
+    if (isBoss) {
+      bossTimeout();
+    } else {
+      failQuest();
+    }
+
     return;
   }
 
   renderQuest();
 };
-
-
-
 const useHint = () => {
-  if (game.mode !== "quest" || !Round.s) return;
+  const isBoss = game.mode === "boss";
+
+  if (
+    (game.mode !== "quest" && !isBoss) ||
+    !Round.s
+  ) return;
+
+  if (isBoss) {
+  if ((Round.s.hintsUsed || 0) >= 1) {
+       showToast("You already used your free hint!");
+      return;
+    }
+
+    const letter = Round.hint(true);
+
+    if (!letter) return;
+      Round.s.hintsUsed++;
+      Round.s.revealedLetter = letter;
+
+
+  showToast("THE HANGMAN KING REVEALED A LETTER!");
+
+    renderQuest();
+
+    if (Round.won()) {
+      bossRoundWon();
+    } else if (game.boss.timeLeft <= 0) {
+      bossTimeout();
+    }
+
+    return;
+  }
 
   const canPay = game.candies >= 5;
   const letter = Round.hint(canPay);
@@ -809,7 +1178,6 @@ const useHint = () => {
     failQuest();
   }
 };
-
 /* ---------- GAME FLOW ---------- */
 
 const startTutorial = () => {
@@ -833,6 +1201,18 @@ const startNewGame = () => {
   game.completed = 0;
   game.elapsedTime = 0;
   game.activeNPC = null;
+
+    clearInterval(game.boss.timer);
+
+  game.boss.unlocked = false;
+  game.boss.hp = BOSS.maxHP;
+  game.boss.round = null;
+  game.boss.timeLeft = BOSS.timeLimit;
+  game.boss.timer = null;
+  game.boss.active = false;
+  game.boss.defeated = false;
+  game.boss.revealed = false;
+game.boss.revealStartedAt = null;
 
   game.mode = "play";
 
@@ -864,6 +1244,9 @@ const endGame = victory => {
   if (game.mode === "end") return;
 
   game.mode = "end";
+  clearInterval(game.boss.timer);
+game.boss.timer = null;
+game.boss.active = false;
   closeDialogue();
 
   const levelScore = game.score + game.candies * 10;
@@ -1114,9 +1497,15 @@ const handleAction = action => {
 };
 
 /* ---------- UPDATE AND DRAW ---------- */
+/* ---------- UPDATE AND DRAW ---------- */
 
 const updateGame = deltaTime => {
   if (game.mode !== "play" || !game.player) return;
+
+  if (dialogue.bossIntroActive) {
+    updateFX(deltaTime);
+    return;
+  }
 
   game.elapsedTime += deltaTime / 1000;
 
@@ -1140,9 +1529,36 @@ const updateGame = deltaTime => {
 };
 
 const renderGame = time => {
+  const bossScreenX = BOSS.x - camera.x;
+
+  const bossInView =
+    game.boss.unlocked &&
+    !game.boss.defeated &&
+    bossScreenX > -180 &&
+    bossScreenX < CANVAS_WIDTH + 180;
+
+  if (bossInView && !game.boss.revealed) {
+    game.boss.revealed = true;
+    game.boss.revealStartedAt = time;
+  }
+
+  const revealElapsed =
+    game.boss.revealStartedAt === null
+      ? 0
+      : Math.max(0, time - game.boss.revealStartedAt);
+
+  const bossEntryProgress = game.boss.revealed
+    ? Math.min(1, revealElapsed / 1500)
+    : 0;
+
+  const night = game.boss.revealed
+    ? Math.min(1, revealElapsed / 2400)
+    : 0;
+
   drawEnvironment({
     coins: game.coinPickups,
-    time: time / 1000
+    time: time / 1000,
+    night
   });
 
   drawCaptives(time / 1000);
@@ -1150,7 +1566,10 @@ const renderGame = time => {
   drawNPCs(
     game.player,
     game.mode,
-    Boolean(dialogue.npc)
+    Boolean(dialogue.npc),
+    game.boss.unlocked,
+    game.boss.defeated,
+    bossEntryProgress
   );
 
   if (game.player) {
@@ -1172,7 +1591,6 @@ const gameLoop = time => {
 
   animationFrame = requestAnimationFrame(gameLoop);
 };
-
 /* ---------- EVENT CONNECTION ---------- */
 
 const connectEvents = () => {
@@ -1250,4 +1668,33 @@ export const initializeGame = () => {
   animationFrame = requestAnimationFrame(gameLoop);
 
   console.log("Game controller initialized.");
+};
+const bossDamageAnimation = () => {
+  const boss = getElement("bossCharacter");
+  const label = getElement("bossHitLabel");
+
+  if (!boss) return;
+
+  boss.classList.remove("hit");
+  void boss.offsetWidth;
+  boss.classList.add("hit");
+
+  if (label) {
+    label.textContent = "-1 HP";
+    label.classList.remove("show");
+
+    void label.offsetWidth;
+    label.classList.add("show");
+  }
+
+  const impact = document.createElement("div");
+  impact.className = "boss-impact";
+  impact.innerHTML = "<i></i>".repeat(8);
+
+  boss.appendChild(impact);
+
+  window.setTimeout(() => {
+    impact.remove();
+    boss.classList.remove("hit");
+  }, 700);
 };

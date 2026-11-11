@@ -13,7 +13,7 @@ import { GROUND_Y } from "../constants.js";
 export const NPCS = [
   {
     name: "Pip",
-    x: 480,
+    x: 600,
     cat: "Animal",
     lo: 5,
     hi: 6,
@@ -32,6 +32,7 @@ export const NPCS = [
     intro: "My dog Biscuit is leashed to that post and the knot only loosens for the right word. Hank volunteered to help. Guess the animal!",
     done: "Biscuit hasn’t stopped zooming around. Thank you!"
   },
+  
 
   {
     name: "Granny Mae",
@@ -190,5 +191,40 @@ export const NPCS = [
     by: GROUND_Y - 30,
     intro: "Howdy! My prize pumpkin is tangled in the vines and I can’t budge it. Guess the farm word to cut it loose!",
     done: "Blue ribbon for sure! Take a carrot for the road."
-  }
+  },
 ];
+
+export const BOSS = {
+  name: "The Hangman King",
+  x: 5250,
+  cat: "Boss",
+  lo: 5,
+  hi: 8,
+   pal: {
+    s: "#b58ac9",
+    t: "#2b1b3d",
+    p: "#171326",
+    h: "wizard",
+    c: "#ffd166"
+  },
+  hp: 5,
+  maxHP: 5,
+  timeLimit: 50,
+
+ introLines: [
+  "So... the little hero finally made it to the edge of town.",
+  "Did you really believe all those troubles were accidents? The tangled ropes, locked cages, broken machines...",
+  "I placed a curse upon this town! Every problem was part of my spell, and every rescue brought you closer to me.",
+  "But enough about my masterpiece. Now it is your turn to face a challenge.",
+  "I will give you three words. Solve them before time runs out, and you may break my curse. Fail, and this town remains mine!",
+  "Well, hero? Let us see if your words are stronger than my magic!"
+],
+  clue:
+    "The final word",
+
+  free:
+    "The Hangman King has fallen!",
+
+  done:
+    "You already defeated me..."
+};

@@ -12,6 +12,16 @@ const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;
 const GY = GROUND_Y;
 const TX = TRUCK_X;
+const blendColor = (day, night, amount) => {
+  const a = day.match(/[a-f0-9]{2}/gi).map(v => parseInt(v, 16));
+  const b = night.match(/[a-f0-9]{2}/gi).map(v => parseInt(v, 16));
+
+  const result = a.map((value, i) =>
+    Math.round(value + (b[i] - value) * amount)
+  );
+
+  return `rgb(${result.join(",")})`;
+};
 
 const px = x => Math.round(x - camera.x);
 
@@ -19,17 +29,36 @@ const rc = (x, y, w, h, color) => {
   ctx.fillStyle = color;
   ctx.fillRect(Math.round(x), Math.round(y), w, h);
 };
-
-const drawSky = time => {
-  [
+const drawSky = (time, night = 0) => {
+  const dayColors = [
     "#a9d3ff",
     "#9ccaf9",
     "#8fc0f4",
     "#84b6ef",
     "#79acea"
-  ].forEach((color, i) => {
-    rc(0, i * 76, W, 76, color);
+  ];
+
+  const nightColors = [
+    "#11182f",
+    "#17213e",
+    "#1c294b",
+    "#233154",
+    "#29385d"
+  ];
+
+  dayColors.forEach((color, i) => {
+    rc(
+      0,
+      i * 76,
+      W,
+      76,
+      blendColor(color, nightColors[i], night)
+    );
   });
+
+  // Clouds become faint as the world gets darker
+  ctx.save();
+  ctx.globalAlpha = 1 - night;
 
   for (let i = 0; i < 7; i++) {
     const x =
@@ -46,27 +75,68 @@ const drawSky = time => {
     rc(x + 16, y - 12, 44, 14, "#f1f7ff");
     rc(x + 8, y + 16, 70, 6, "#cfe3fb");
   }
-};
 
-const drawBuildings = () => {
+  ctx.restore();
+
+  // Stars and moon
+  if (night > 0) {
+    ctx.save();
+    ctx.globalAlpha = night;
+
+    for (let i = 0; i < 38; i++) {
+      const x = (i * 113 + 29) % W;
+      const y = (i * 47 + 17) % 190;
+      const size = i % 5 === 0 ? 3 : 2;
+
+      rc(
+        x,
+        y,
+        size,
+        size,
+        "#fff4c2"
+      );
+    }
+
+    ctx.fillStyle = "#fff1bd";
+    ctx.beginPath();
+    ctx.arc(W - 105, 58, 19, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#192443";
+    ctx.beginPath();
+    ctx.arc(W - 96, 50, 17, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+};const drawBuildings = (night = 0) => {
   const firstBuilding = Math.floor((camera.x * 0.3) / 140);
+
+  const buildingColor = blendColor("#cfe3fb", "#202b4a", night);
+  const roofColor = blendColor("#e3eeff", "#384463", night);
+  const windowColor = blendColor("#e3eeff", "#ffda86", night);
 
   for (let i = firstBuilding - 1; i < firstBuilding + 8; i++) {
     const bx = i * 140 - camera.x * 0.3;
     const h = 70 + (((i * 37) % 5 + 5) % 5) * 20;
     const w = 70 + (((i * 53) % 3 + 3) % 3) * 20;
 
-    rc(bx, GY - h, w, h, "#cfe3fb");
-    rc(bx, GY - h, w, 4, "#e3eeff");
+    rc(bx, GY - h, w, h, buildingColor);
+    rc(bx, GY - h, w, 4, roofColor);
 
     for (let row = 14; row < h - 10; row += 22) {
       for (let col = 10; col < w - 12; col += 20) {
-        rc(bx + col, GY - h + row, 8, 10, "#e3eeff");
+        rc(
+          bx + col,
+          GY - h + row,
+          8,
+          10,
+          windowColor
+        );
       }
     }
   }
 };
-
 const drawTrees = () => {
   for (let i = 0; i < 22; i++) {
     const x = 250 + i * 520;
@@ -216,10 +286,11 @@ const drawCoins = (coins, time) => {
 
 export const drawEnvironment = ({
   coins = [],
-  time = 0
+  time = 0,
+  night = 0
 } = {}) => {
-  drawSky(time);
-  drawBuildings();
+  drawSky(time, night);
+  drawBuildings(night);
   drawTrees();
   drawBushes();
   drawFlowers();

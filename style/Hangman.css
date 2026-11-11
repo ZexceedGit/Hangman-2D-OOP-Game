@@ -145,21 +145,26 @@
     font-size: .78rem;
     font-style: normal;
 }
-
 .game-toast {
-    position: absolute;
-    top: 46px;
-    left: 50%;
-    z-index: 3;
-    display: none;
-    padding: 3px 16px;
-    background: var(--sun);
-    border: 3px solid var(--navy);
-    border-radius: 99px;
-    box-shadow: 0 3px 0 var(--navy);
-    font-size: .95rem;
-    font-weight: 700;
-    transform: translateX(-50%);
+  position: absolute;
+  z-index: 60 !important;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 28px);
+  padding: 11px 18px;
+  background: #fff3c0;
+  color: #16257a;
+  border: 4px solid #16257a;
+  display:none;
+  border-radius: 7px;
+  box-shadow: 0 5px 0 #7a3d1e;
+  font-size: clamp(11px, 2vw, 15px);
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.4;
+  pointer-events: none;
 }
 
 .touch-controls {

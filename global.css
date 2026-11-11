@@ -156,3 +156,375 @@ button:focus-visible {
         background: #12151c;
     }
 }
+.boss-battle-layout {
+  width: min(100%, 430px);
+}
+
+#gameArt.boss-mode-art {
+  width: 100%;
+  min-width: 260px;
+}
+
+.boss-battle-scene {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.boss-battle-header {
+  width: min(100%, 340px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #fff;
+  font-size: 13px;
+  text-shadow: 2px 2px #171326;
+}
+
+.boss-health-track {
+  width: 100%;
+  height: 13px;
+  overflow: hidden;
+  background: #30233b;
+  border: 3px solid #171326;
+  border-radius: 4px;
+}
+
+#bossHPFill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #c83cff, #ff6f7d);
+  transition: width 0.35s steps(5);
+}
+
+.boss-combatants {
+  min-height: 190px;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+}
+
+.boss-character {
+  position: relative;
+  width: 150px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center bottom;
+}
+
+.boss-sprite {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  image-rendering: pixelated;
+  filter: drop-shadow(4px 5px 0 #171326);
+  animation: bossIdle 1.8s ease-in-out infinite;
+}
+
+.boss-hank {
+  width: 95px;
+  height: 105px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boss-hank .gallows {
+  width: 100px;
+  height: 100px;
+}
+
+.boss-character.hit {
+  animation: bossRecoil 0.5s steps(5) both;
+}
+
+.boss-character.hit .boss-sprite {
+  animation: bossFlash 0.5s steps(2) both;
+}
+
+.boss-hit-label {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 5;
+  color: #ffdf68;
+  font-size: 20px;
+  font-weight: 900;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 2px 2px #171326;
+  white-space: nowrap;
+}
+
+.boss-hit-label.show {
+  animation: bossHitLabel 0.8s ease-out forwards;
+}
+
+.boss-impact {
+  position: absolute;
+  inset: 35% 20%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.boss-impact i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: #ffd166;
+  box-shadow: 0 0 7px #ff6f7d;
+  animation: bossSpark 0.55s ease-out forwards;
+}
+
+.boss-impact i:nth-child(1) { --x: -40px; --y: -30px; }
+.boss-impact i:nth-child(2) { --x: 35px; --y: -35px; }
+.boss-impact i:nth-child(3) { --x: -50px; --y: 10px; }
+.boss-impact i:nth-child(4) { --x: 48px; --y: 12px; }
+.boss-impact i:nth-child(5) { --x: -20px; --y: 38px; }
+.boss-impact i:nth-child(6) { --x: 25px; --y: 35px; }
+.boss-impact i:nth-child(7) { --x: 0px; --y: -45px; }
+.boss-impact i:nth-child(8) { --x: 0px; --y: 45px; }
+
+@keyframes bossIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes bossRecoil {
+  0% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-13px) rotate(-5deg); }
+  45% { transform: translateX(12px) rotate(5deg); }
+  70% { transform: translateX(-5px); }
+  100% { transform: translateX(0) rotate(0); }
+}
+
+@keyframes bossFlash {
+  0%, 100% { filter: brightness(1); }
+  25%, 60% { filter: brightness(3) saturate(0.2); }
+}
+
+@keyframes bossHitLabel {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.7); }
+  25% { opacity: 1; transform: translate(-50%, -5px) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -35px) scale(1); }
+}
+
+@keyframes bossSpark {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--x), var(--y)) scale(0.2);
+  }
+}
+.boss-side-panel[hidden] {
+  display: none !important;
+}
+
+.boss-fight-layout {
+  display: grid !important;
+  grid-template-columns:
+    minmax(110px, .9fr)
+    minmax(180px, 1.3fr)
+    minmax(120px, .9fr);
+  align-items: center;
+  justify-content: stretch;
+  flex-wrap: nowrap;
+  gap: 10px;
+  height: 195px;
+  max-height: 195px;
+  min-height: 0;
+  margin: 0;
+}
+
+.boss-fight-layout .character-art {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.boss-fight-layout #gameArt {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.boss-fight-layout #gameArt .gallows {
+  width: 145px;
+  height: 145px;
+}
+
+.boss-fight-layout .word-area {
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+
+.boss-side-panel {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 5px;
+  color: #fff;
+  text-align: center;
+}
+
+.boss-side-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 900;
+  text-shadow: 2px 2px #171326;
+}
+
+.boss-health-track {
+  width: 100%;
+  height: 13px;
+  overflow: hidden;
+  background: #30233b;
+  border: 3px solid #171326;
+  border-radius: 4px;
+}
+
+#bossHPFill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #c83cff, #ff6f7d);
+  transition: width .35s steps(5);
+}
+
+#bossTimerText {
+  color: #ffd166;
+}
+
+.boss-side-art {
+  height: 145px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boss-side-art .boss-sprite {
+  width: 125px;
+  height: 145px;
+  image-rendering: pixelated;
+}
+#quest.boss-mode-quest {
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow: hidden;
+}
+
+.boss-mode-quest .quest-header {
+  flex: 0 0 auto;
+}
+
+.boss-mode-quest .game-stage {
+  flex: 0 0 auto;
+}
+
+.boss-mode-quest .keyboard {
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.boss-mode-quest .keyboard-row {
+  gap: 3px;
+}
+
+.boss-mode-quest .word-letters {
+  gap: 3px;
+}
+@media (max-width: 620px) {
+  .boss-fight-layout {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 135px auto;
+    height: auto;
+    max-height: 190px;
+  }
+
+  .boss-fight-layout .character-art {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .boss-fight-layout .boss-side-panel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .boss-fight-layout .word-area {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .boss-side-art {
+    height: 105px;
+  }
+
+  .boss-side-art .boss-sprite {
+    height: 105px;
+    width: 90px;
+  }
+
+  .boss-fight-layout #gameArt .gallows {
+    width: 115px;
+    height: 115px;
+  }
+}
+.letter-slot.hint-revealed {
+  position: relative;
+  z-index: 2;
+  background: #ffd166 !important;
+  color: #16257a !important;
+  border-color: #fff3c0 !important;
+  animation: bossLetterReveal .75s ease-out;
+  box-shadow:
+    0 0 0 3px #ffd166,
+    0 0 18px #ffd166;
+}
+
+@keyframes bossLetterReveal {
+  0% {
+    transform: scale(.5) rotate(-12deg);
+    opacity: .2;
+    filter: brightness(2);
+  }
+
+  35% {
+    transform: scale(1.35) rotate(8deg);
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+
+  65% {
+    transform: scale(.9) rotate(-4deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    filter: brightness(1);
+  }
+}
