@@ -12,9 +12,24 @@ const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;
 const GY = GROUND_Y;
 const TX = TRUCK_X;
+
+const readColor = color => {
+  if (color.startsWith("#")) {
+    const hex = color.slice(1);
+
+    return [0, 2, 4].map(
+      index => parseInt(hex.slice(index, index + 2), 16)
+    );
+  }
+
+  return (color.match(/\d+/g) || ["0", "0", "0"])
+    .slice(0, 3)
+    .map(Number);
+};
+
 const blendColor = (day, night, amount) => {
-  const a = day.match(/[a-f0-9]{2}/gi).map(v => parseInt(v, 16));
-  const b = night.match(/[a-f0-9]{2}/gi).map(v => parseInt(v, 16));
+  const a = readColor(day);
+  const b = readColor(night);
 
   const result = a.map((value, i) =>
     Math.round(value + (b[i] - value) * amount)
@@ -23,19 +38,63 @@ const blendColor = (day, night, amount) => {
   return `rgb(${result.join(",")})`;
 };
 
+const smoothStep = (start, end, value) => {
+  const t = Math.max(
+    0,
+    Math.min(1, (value - start) / (end - start))
+  );
+
+  return t * t * (3 - 2 * t);
+};
+
+const getDayCycle = time => {
+  const cycleDuration = 120;
+  const progress = ((time % cycleDuration) + cycleDuration) % cycleDuration / cycleDuration;
+
+  const sunset =
+    smoothStep(0.24, 0.32, progress) *
+    (1 - smoothStep(0.40, 0.47, progress));
+
+  const night =
+    smoothStep(0.43, 0.52, progress) *
+    (1 - smoothStep(0.70, 0.82, progress));
+
+  const sunrise =
+    smoothStep(0.68, 0.78, progress) *
+    (1 - smoothStep(0.82, 0.91, progress));
+
+  return { sunset, night, sunrise };
+};
+
 const px = x => Math.round(x - camera.x);
 
 const rc = (x, y, w, h, color) => {
   ctx.fillStyle = color;
   ctx.fillRect(Math.round(x), Math.round(y), w, h);
 };
-const drawSky = (time, night = 0) => {
+const drawSky = (time, night = 0, sunset = 0, sunrise = 0) => {
   const dayColors = [
     "#a9d3ff",
     "#9ccaf9",
     "#8fc0f4",
     "#84b6ef",
     "#79acea"
+  ];
+
+  const sunsetColors = [
+    "#f8b18d",
+    "#f29a91",
+    "#df8298",
+    "#b66b91",
+    "#815477"
+  ];
+
+  const sunriseColors = [
+    "#eab0bc",
+    "#e9a4b5",
+    "#d28da9",
+    "#a27caa",
+    "#77749e"
   ];
 
   const nightColors = [
@@ -47,18 +106,53 @@ const drawSky = (time, night = 0) => {
   ];
 
   dayColors.forEach((color, i) => {
-    rc(
-      0,
-      i * 76,
-      W,
-      76,
-      blendColor(color, nightColors[i], night)
+    let finalColor = blendColor(
+      color,
+      sunsetColors[i],
+      sunset
     );
+
+    finalColor = blendColor(
+      finalColor,
+      sunriseColors[i],
+      sunrise
+    );
+
+    finalColor = blendColor(
+      finalColor,
+      nightColors[i],
+      night
+    );
+
+    rc(0, i * 76, W, 76, finalColor);
   });
 
-  // Clouds become faint as the world gets darker
+  const twilight = Math.max(sunset, sunrise);
+
+  if (twilight > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = twilight;
+    ctx.fillStyle = "#ffd18c";
+    ctx.beginPath();
+    ctx.arc(W - 115, 205, 21, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.save();
-  ctx.globalAlpha = 1 - night;
+  ctx.globalAlpha = 1 - night * 0.8;
+
+  const cloudColor = blendColor(
+    "#f1f7ff",
+    "#efb2aa",
+    twilight
+  );
+
+  const cloudShade = blendColor(
+    "#cfe3fb",
+    "#d58a9b",
+    twilight
+  );
 
   for (let i = 0; i < 7; i++) {
     const x =
@@ -71,14 +165,13 @@ const drawSky = (time, night = 0) => {
 
     const y = 34 + (i % 3) * 38;
 
-    rc(x, y, 90, 16, "#f1f7ff");
-    rc(x + 16, y - 12, 44, 14, "#f1f7ff");
-    rc(x + 8, y + 16, 70, 6, "#cfe3fb");
+    rc(x, y, 90, 16, cloudColor);
+    rc(x + 16, y - 12, 44, 14, cloudColor);
+    rc(x + 8, y + 16, 70, 6, cloudShade);
   }
 
   ctx.restore();
 
-  // Stars and moon
   if (night > 0) {
     ctx.save();
     ctx.globalAlpha = night;
@@ -88,13 +181,7 @@ const drawSky = (time, night = 0) => {
       const y = (i * 47 + 17) % 190;
       const size = i % 5 === 0 ? 3 : 2;
 
-      rc(
-        x,
-        y,
-        size,
-        size,
-        "#fff4c2"
-      );
+      rc(x, y, size, size, "#fff4c2");
     }
 
     ctx.fillStyle = "#fff1bd";
@@ -109,12 +196,47 @@ const drawSky = (time, night = 0) => {
 
     ctx.restore();
   }
-};const drawBuildings = (night = 0) => {
+};
+const drawBuildings = (night = 0, sunset = 0, sunrise = 0) => {
   const firstBuilding = Math.floor((camera.x * 0.3) / 140);
 
-  const buildingColor = blendColor("#cfe3fb", "#202b4a", night);
-  const roofColor = blendColor("#e3eeff", "#384463", night);
-  const windowColor = blendColor("#e3eeff", "#ffda86", night);
+  const twilight = Math.max(sunset, sunrise);
+
+  let buildingColor = blendColor(
+    "#cfe3fb",
+    "#e49a91",
+    twilight
+  );
+
+  buildingColor = blendColor(
+    buildingColor,
+    "#202b4a",
+    night
+  );
+
+  let roofColor = blendColor(
+    "#e3eeff",
+    "#c77b88",
+    twilight
+  );
+
+  roofColor = blendColor(
+    roofColor,
+    "#384463",
+    night
+  );
+
+  let windowColor = blendColor(
+    "#e3eeff",
+    "#ffc27d",
+    twilight
+  );
+
+  windowColor = blendColor(
+    windowColor,
+    "#ffda86",
+    night
+  );
 
   for (let i = firstBuilding - 1; i < firstBuilding + 8; i++) {
     const bx = i * 140 - camera.x * 0.3;
@@ -283,14 +405,31 @@ const drawCoins = (coins, time) => {
     rc(sx - 8, y - 7, 16, 3, "rgba(255,255,255,.45)");
   });
 };
-
 export const drawEnvironment = ({
   coins = [],
   time = 0,
   night = 0
 } = {}) => {
-  drawSky(time, night);
-  drawBuildings(night);
+  const cycle = getDayCycle(time);
+
+  const currentNight = Math.max(
+    night,
+    cycle.night
+  );
+
+  drawSky(
+    time,
+    currentNight,
+    cycle.sunset,
+    cycle.sunrise
+  );
+
+  drawBuildings(
+    currentNight,
+    cycle.sunset,
+    cycle.sunrise
+  );
+
   drawTrees();
   drawBushes();
   drawFlowers();

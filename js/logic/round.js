@@ -39,10 +39,12 @@ export const Round = {
     Run.used.push(selected[1]);
 
     return {
-      clue: selected[2] || n.clue || selected[0],   
-         word: selected[1],
+      category: selected[0],
+      clue: selected[2] || n.clue || "No clue available.",
+      word: selected[1],
       guessed: [],
       misses: 0
+      
     };
   },
 

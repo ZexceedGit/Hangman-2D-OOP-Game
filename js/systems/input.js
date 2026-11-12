@@ -4,12 +4,20 @@ export const inputState = {
   jump: false
 };
 
+let inputMode = "world";
+
+export const setInputMode = mode => {
+  inputMode = mode;
+  pressedKeys.clear();
+  updateInputState();
+};
+
 const pressedKeys = new Set();
 
 const keyMap = {
   ArrowLeft: "left",
   a: "left",
-  A: "left",
+  A: "left",  
 
   ArrowRight: "right",
   d: "right",
@@ -52,9 +60,35 @@ const updateInputState = () => {
     key => keyMap[key] === "jump"
   );
 };
+const isTypingTarget = target => {
+  if (!(target instanceof HTMLElement)) return false;
 
+  return (
+    target.matches("input, textarea, select") ||
+    target.isContentEditable
+  );
+};
 const handleKeyDown = event => {
   const key = event.key;
+    if (
+    key === "Escape" &&
+    document.body.classList.contains("boss-fight-active")
+  ) {
+    event.preventDefault();
+    return;
+  }
+
+  // Allow normal typing inside input fields
+  if (isTypingTarget(event.target)) {
+    return;
+  }
+  if (inputMode === "guess" && /^[a-zA-Z]$/.test(key)) {
+  if (!event.repeat) {
+    dispatchLetter(key);
+  }
+
+  return;
+}
 
   if (
     key === "ArrowLeft" ||
