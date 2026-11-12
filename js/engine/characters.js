@@ -219,6 +219,7 @@ export const drawBoss = (
   time = 0,
   entryProgress = 1
 ) => {
+  
   const sx = px(BOSS.x);
   const y = GROUND_Y;
 
@@ -244,7 +245,7 @@ export const drawBoss = (
     );
   }
 
-  drawBossPixelArt(sx, bossY, 1.5);
+  drawBossPixelArt(sx, bossY, 1.5, time);
 
   // Crown marker and name appear after the landing
   if (progress >= 0.9) {
@@ -294,47 +295,90 @@ export const drawBoss = (
   ctx.textAlign = "left";
 };
 export const bossSVG = () => `
-  <svg class="boss-sprite" viewBox="0 0 100 130"
-       role="img" aria-label="The Hangman King">
+<svg class="boss-sprite coder-king"
+     viewBox="0 0 100 130"
+     role="img"
+     aria-label="The Last Keeper">
 
-    <g shape-rendering="crispEdges">
+  <g shape-rendering="crispEdges">
 
-      <rect x="20" y="119" width="60" height="5" fill="#171326"/>
-      <rect x="27" y="72" width="46" height="43" fill="#2b1b3d"/>
-      <rect x="18" y="78" width="18" height="28" fill="#171326"/>
-      <rect x="64" y="78" width="18" height="28" fill="#171326"/>
+    <rect x="25" y="124" width="50" height="4" fill="#202638"/>
 
-      <rect x="32" y="57" width="36" height="36" fill="#7b3f9e"/>
-      <rect x="27" y="67" width="46" height="43" fill="#2b1b3d"/>
-      <rect x="34" y="91" width="32" height="7" fill="#c83cff"/>
-      <rect x="43" y="66" width="14" height="28" fill="#7b3f9e"/>
+    <rect x="32" y="108" width="15" height="13" fill="#303346"/>
+    <rect x="53" y="108" width="15" height="13" fill="#303346"/>
+    <rect x="26" y="118" width="23" height="6" fill="#252b3a"/>
+    <rect x="51" y="118" width="23" height="6" fill="#252b3a"/>
 
-      <rect x="36" y="29" width="28" height="31" fill="#b58ac9"/>
-      <rect x="31" y="35" width="38" height="20" fill="#7b3f9e"/>
-      <rect x="35" y="40" width="8" height="6" fill="#ffffff"/>
-      <rect x="57" y="40" width="8" height="6" fill="#ffffff"/>
-      <rect x="38" y="42" width="4" height="4" fill="#c83cff"/>
-      <rect x="58" y="42" width="4" height="4" fill="#c83cff"/>
-      <rect x="43" y="53" width="14" height="3" fill="#171326"/>
+    <rect x="27" y="63" width="46" height="48" fill="#30394d"/>
+    <rect x="20" y="69" width="60" height="17" fill="#39475c"/>
+    <rect x="29" y="78" width="42" height="31" fill="#536078"/>
 
-      <rect x="31" y="25" width="38" height="6" fill="#ffd166"/>
-      <rect x="31" y="15" width="8" height="12" fill="#ffd166"/>
-      <rect x="46" y="7" width="8" height="20" fill="#ffd166"/>
-      <rect x="61" y="15" width="8" height="12" fill="#ffd166"/>
-      <rect x="48" y="16" width="4" height="6" fill="#c83cff"/>
+    <rect x="18" y="73" width="15" height="28" fill="#344052"/>
+    <rect x="67" y="73" width="15" height="28" fill="#344052"/>
 
-      <rect x="12" y="64" width="7" height="41" fill="#8b5a2b"/>
-      <rect x="7" y="54" width="17" height="14" fill="#c83cff"/>
-      <rect x="11" y="49" width="9" height="5" fill="#ffd166"/>
-      <rect x="14" y="38" width="3" height="11" fill="#ffd166"/>
-      <rect x="9" y="42" width="13" height="3" fill="#ffd166"/>
+    <rect x="17" y="97" width="12" height="9" fill="#d7a083"/>
+    <rect x="73" y="97" width="12" height="9" fill="#d7a083"/>
 
-      <rect x="27" y="110" width="18" height="7" fill="#171326"/>
-      <rect x="55" y="110" width="18" height="7" fill="#171326"/>
+    <rect x="31" y="104" width="38" height="4" fill="#b69b68"/>
+    <rect x="47" y="103" width="6" height="7" fill="#d3b77c"/>
 
-    </g>
-  </svg>
+    <rect x="35" y="75" width="30" height="34" fill="#46536a"/>
+    <rect x="36" y="75" width="5" height="32" fill="#30394d"/>
+    <rect x="59" y="75" width="5" height="32" fill="#30394d"/>
+
+    <rect x="32" y="65" width="12" height="15" fill="#b69b68"/>
+    <rect x="56" y="65" width="12" height="15" fill="#b69b68"/>
+    <rect x="40" y="66" width="20" height="8" fill="#d0b47a"/>
+
+    <rect x="45" y="76" width="10" height="11" fill="#b69b68"/>
+    <rect x="47" y="78" width="6" height="6" fill="#78678c"/>
+    <rect x="48" y="79" width="4" height="4" fill="#c8a7d5"/>
+
+    <rect x="42" y="57" width="16" height="13" fill="#b87963"/>
+    <rect x="43" y="59" width="14" height="10" fill="#d7a083"/>
+
+    <rect x="31" y="29" width="38" height="37" fill="#433b3c"/>
+    <rect x="35" y="33" width="30" height="31" fill="#d7a083"/>
+
+    <rect x="30" y="29" width="40" height="13" fill="#493f40"/>
+    <rect x="32" y="24" width="34" height="9" fill="#51494a"/>
+    <rect x="28" y="35" width="8" height="19" fill="#493f40"/>
+    <rect x="64" y="34" width="8" height="19" fill="#493f40"/>
+
+    <rect x="36" y="25" width="5" height="5" fill="#8a8580"/>
+    <rect x="45" y="24" width="5" height="4" fill="#a39b91"/>
+    <rect x="61" y="29" width="5" height="4" fill="#8a8580"/>
+
+    <rect x="36" y="39" width="8" height="3" fill="#8c6157"/>
+    <rect x="55" y="39" width="8" height="3" fill="#8c6157"/>
+
+    <rect x="38" y="44" width="8" height="3" fill="#493b3b"/>
+    <rect x="54" y="44" width="8" height="3" fill="#493b3b"/>
+
+    <rect x="40" y="44" width="4" height="2" fill="#eee0ca"/>
+    <rect x="56" y="44" width="4" height="2" fill="#eee0ca"/>
+
+    <rect x="42" y="49" width="16" height="7" fill="#c58a70"/>
+    <rect x="49" y="48" width="3" height="6" fill="#b87963"/>
+    <rect x="46" y="58" width="8" height="2" fill="#855b56"/>
+
+    <rect x="40" y="54" width="5" height="4" fill="#b87963"/>
+    <rect x="55" y="54" width="5" height="4" fill="#b87963"/>
+
+    <rect x="31" y="62" width="38" height="6" fill="#30394d"/>
+    <rect x="43" y="64" width="14" height="5" fill="#b69b68"/>
+
+    <rect x="48" y="80" width="4" height="3" fill="#d3b77c"/>
+    <rect x="47" y="83" width="6" height="5" fill="#78678c"/>
+    <rect x="48" y="84" width="4" height="3" fill="#c8a7d5"/>
+
+    <rect x="34" y="90" width="7" height="3" fill="#65728a"/>
+    <rect x="59" y="90" width="7" height="3" fill="#65728a"/>
+
+  </g>
+</svg>
 `;
+
 
 const R = (x, y, w, h, c = "g") =>
   `<rect class="${c}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
@@ -467,19 +511,20 @@ const svg = box.querySelector(".gallows");
     face.innerHTML = FACES[mood];
   }
 
-  const currentState = svg.classList.contains("dead")
-    ? "dead"
-    : svg.classList.contains("free")
-      ? "free"
-      : "";
+  const currentState = [
+  "dead",
+  "free",
+  "attack",
+  "hurt"
+].find(state => svg.classList.contains(state)) || "";
 
-  if (currentState !== state) {
-    svg.classList.remove("free", "dead");
+if (currentState !== state) {
+  svg.classList.remove("free", "dead", "attack", "hurt");
 
-    if (state) {
-      svg.classList.add(state);
-    }
+  if (state) {
+    svg.classList.add(state);
   }
+}
 };
 
 
@@ -500,54 +545,92 @@ export const say = (element, text) => {
     }
   }, 22);
 };
-
-const drawBossPixelArt = (x, baseline, scale = 1.5) => {
+const drawBossPixelArt = (x, baseline, scale = 1.5, time = 0) => {
   ctx.save();
 
-  ctx.translate(
-    x - 50 * scale,
-    baseline - 124 * scale
-  );
-
+  ctx.translate(x - 50 * scale, baseline - 130 * scale);
   ctx.scale(scale, scale);
 
-  const p = (x, y, w, h, color) =>
-    rc(x, y, w, h, color);
+  const p = (x, y, w, h, color) => rc(x, y, w, h, color);
 
-  p(20, 119, 60, 5, "#171326");
+  p(25, 124, 50, 4, "#202638");
 
-  p(27, 72, 46, 43, "#2b1b3d");
-  p(18, 78, 18, 28, "#171326");
-  p(64, 78, 18, 28, "#171326");
+  p(32, 108, 15, 13, "#303346");
+  p(53, 108, 15, 13, "#303346");
+  p(26, 118, 23, 6, "#252b3a");
+  p(51, 118, 23, 6, "#252b3a");
 
-  p(32, 57, 36, 36, "#7b3f9e");
-  p(27, 67, 46, 43, "#2b1b3d");
-  p(34, 91, 32, 7, "#c83cff");
-  p(43, 66, 14, 28, "#7b3f9e");
+  p(27, 63, 46, 48, "#30394d");
+  p(20, 69, 60, 17, "#39475c");
+  p(29, 78, 42, 31, "#536078");
 
-  p(36, 29, 28, 31, "#b58ac9");
-  p(31, 35, 38, 20, "#7b3f9e");
+  p(18, 73, 15, 28, "#344052");
+  p(67, 73, 15, 28, "#344052");
 
-  p(35, 40, 8, 6, "#ffffff");
-  p(57, 40, 8, 6, "#ffffff");
-  p(38, 42, 4, 4, "#c83cff");
-  p(58, 42, 4, 4, "#c83cff");
-  p(43, 53, 14, 3, "#171326");
+  p(17, 97, 12, 9, "#d7a083");
+  p(73, 97, 12, 9, "#d7a083");
 
-  p(31, 25, 38, 6, "#ffd166");
-  p(31, 15, 8, 12, "#ffd166");
-  p(46, 7, 8, 20, "#ffd166");
-  p(61, 15, 8, 12, "#ffd166");
-  p(48, 16, 4, 6, "#c83cff");
+  p(31, 104, 38, 4, "#b69b68");
+  p(47, 103, 6, 7, "#d3b77c");
 
-  p(12, 64, 7, 41, "#8b5a2b");
-  p(7, 54, 17, 14, "#c83cff");
-  p(11, 49, 9, 5, "#ffd166");
-  p(14, 38, 3, 11, "#ffd166");
-  p(9, 42, 13, 3, "#ffd166");
+  p(35, 75, 30, 34, "#46536a");
+  p(36, 75, 5, 32, "#30394d");
+  p(59, 75, 5, 32, "#30394d");
 
-  p(27, 110, 18, 7, "#171326");
-  p(55, 110, 18, 7, "#171326");
+  p(32, 65, 12, 15, "#b69b68");
+  p(56, 65, 12, 15, "#b69b68");
+  p(40, 66, 20, 8, "#d0b47a");
+
+  p(45, 76, 10, 11, "#b69b68");
+  p(47, 78, 6, 6, "#78678c");
+
+  const glow = 0.78 + Math.sin(time * 2.5) * 0.12;
+
+  ctx.save();
+  ctx.globalAlpha = glow;
+  p(48, 79, 4, 4, "#c8a7d5");
+  ctx.restore();
+
+  p(42, 57, 16, 13, "#b87963");
+  p(43, 59, 14, 10, "#d7a083");
+
+  p(31, 29, 38, 37, "#433b3c");
+  p(35, 33, 30, 31, "#d7a083");
+
+  p(30, 29, 40, 13, "#493f40");
+  p(32, 24, 34, 9, "#51494a");
+  p(28, 35, 8, 19, "#493f40");
+  p(64, 34, 8, 19, "#493f40");
+
+  p(36, 25, 5, 5, "#8a8580");
+  p(45, 24, 5, 4, "#a39b91");
+  p(61, 29, 5, 4, "#8a8580");
+
+  p(36, 39, 8, 3, "#8c6157");
+  p(55, 39, 8, 3, "#8c6157");
+
+  p(38, 44, 8, 3, "#493b3b");
+  p(54, 44, 8, 3, "#493b3b");
+
+  p(40, 44, 4, 2, "#eee0ca");
+  p(56, 44, 4, 2, "#eee0ca");
+
+  p(42, 49, 16, 7, "#c58a70");
+  p(49, 48, 3, 6, "#b87963");
+  p(46, 58, 8, 2, "#855b56");
+
+  p(40, 54, 5, 4, "#b87963");
+  p(55, 54, 5, 4, "#b87963");
+
+  p(31, 62, 38, 6, "#30394d");
+  p(43, 64, 14, 5, "#b69b68");
+
+  p(48, 80, 4, 3, "#d3b77c");
+  p(47, 83, 6, 5, "#78678c");
+  p(48, 84, 4, 3, "#c8a7d5");
+
+  p(34, 90, 7, 3, "#65728a");
+  p(59, 90, 7, 3, "#65728a");
 
   ctx.restore();
 };

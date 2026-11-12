@@ -1,3 +1,10 @@
+import { setInputMode } from "./systems/input.js";
+import {
+  submitLeaderboardScore,
+  fetchLeaderboard,
+  downloadLeaderboard
+} from "./systems/leaderboard.js";
+
 
 import {
   GROUND_Y,
@@ -61,20 +68,37 @@ import {
   saveBestScore,
   saveSettings
 } from "./systems/storage.js";
-
 import {
+  unlockAudio,
   setSoundEnabled,
   playCorrectSound,
   playWrongSound,
   playCoinSound,
   playQuestCompleteSound,
-  playGameOverSound
+  playGameOverSound,
+  playBossEntranceSound,
+  playBossLandSound,
+  playBossDialogueSound,
+  playBossHintSound,
+  playHankAttackSound,
+  playBossDamageSound,
+  playBossAttackSound,
+  playBossDefeatSound,
+  playDialogueBlip,
+  startBossMusic,
+  stopBossMusic,
+   startGameMusic,
+  stopGameMusic
 } from "./systems/audio.js";
+
+import { QUEST_ITEMS } from "./data/items.js";
 
 export const game = {
   mode: "menu",
   player: null,
+  playerName: "",
   coinPickups: [],
+  inventory: [],
   score: INITIAL_SCORE,
   candies: 0,
   keys: 0,
@@ -96,17 +120,347 @@ export const game = {
   revealed: false,
   revealStartedAt: null,
   revealCutsceneActive: false,
+  landingSoundPlayed: false,
 cameraPanFrom: null,
 cameraPanTarget: null
 }
 };
+const completedNPCNames = new Set();
+const npcIntroSeen = new Set();
+
+
+let inventoryExpanded = false;
+
+const hasQuestItem = npc => {
+  const requirements = npc.requiresItems || [];
+
+  return requirements.every(item =>
+    game.inventory.includes(item)
+  );
+};
+
+const grantQuestItem = itemId => {
+  const item = QUEST_ITEMS[itemId];
+
+  if (!item || game.inventory.includes(itemId)) {
+    return null;
+  }
+
+  game.inventory.push(itemId);
+
+  return item;
+};
+const getQuestDialogue = (npc, hasSeenIntro = false) => {
+  if (npc.state === 2 || completedNPCNames.has(npc.name)) {
+    return [npc.done || "Thank you for helping me!"];
+  }
+
+  if (npc.failed) {
+    return ["Hank's back on the rope! Try a fresh word?"];
+  }
+
+  if (npc.round) {
+    return ["Ready to get back to Hank?"];
+  }
+
+  if (!npc.requiresItems?.length) {
+    return [npc.intro];
+  }
+
+  if (!hasQuestItem(npc)) {
+    return hasSeenIntro
+      ? [npc.lockedDialogue || "I still need something before we can continue."]
+      : [npc.intro, npc.lockedDialogue || "I still need something before we can continue."];
+  }
+
+  return hasSeenIntro
+    ? [npc.readyDialogue || "Wonderful! Let's get started!"]
+    : [npc.intro, npc.readyDialogue || "Wonderful! Let's get started!"];
+};
+
+const splitDialoguePages = (dialogueElement, messages, maxLines = 2) => {
+  const textElement =
+    dialogueElement.querySelector(".txt") || dialogueElement;
+
+  const textStyle = window.getComputedStyle(textElement);
+  const boxRect = dialogueElement.getBoundingClientRect();
+  const boxStyle = window.getComputedStyle(dialogueElement);
+
+  let width = boxRect.width -
+    parseFloat(boxStyle.paddingLeft) -
+    parseFloat(boxStyle.paddingRight);
+
+  let parent = textElement.parentElement;
+
+  while (parent && dialogueElement.contains(parent)) {
+    const rect = parent.getBoundingClientRect();
+    const style = window.getComputedStyle(parent);
+
+    if (
+      rect.width > 100 &&
+      ["block", "flex", "grid"].includes(style.display)
+    ) {
+      width = Math.min(width, rect.width -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight));
+      break;
+    }
+
+    if (parent === dialogueElement) break;
+    parent = parent.parentElement;
+  }
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  ctx.font = textStyle.font || 
+    `${textStyle.fontWeight} ${textStyle.fontSize} ${textStyle.fontFamily}`;
+
+  const letterSpacing =
+    textStyle.letterSpacing === "normal"
+      ? 0
+      : parseFloat(textStyle.letterSpacing) || 0;
+
+  const measure = text =>
+    ctx.measureText(text).width +
+    Math.max(0, text.length - 1) * letterSpacing;
+
+  const pages = [];
+  let currentLines = [];
+
+  const addLine = line => {
+    currentLines.push(line);
+
+    if (currentLines.length === maxLines) {
+      pages.push(currentLines.join("\n"));
+      currentLines = [];
+    }
+  };
+
+  for (const message of messages) {
+    if (!message) continue;
+
+    const paragraphs = String(message).split("\n");
+
+    for (const paragraph of paragraphs) {
+      const words = paragraph.trim().split(/\s+/).filter(Boolean);
+      let currentLine = "";
+
+      for (const word of words) {
+        const candidate = currentLine
+          ? `${currentLine} ${word}`
+          : word;
+
+        if (measure(candidate) <= width) {
+          currentLine = candidate;
+          continue;
+        }
+
+        if (currentLine) {
+          addLine(currentLine);
+          currentLine = "";
+        }
+
+        if (measure(word) <= width) {
+          currentLine = word;
+          continue;
+        }
+
+        let part = "";
+
+        for (const char of word) {
+          if (measure(part + char) > width && part) {
+            addLine(part);
+            part = char;
+          } else {
+            part += char;
+          }
+        }
+
+        currentLine = part;
+      }
+
+      if (currentLine) addLine(currentLine);
+    }
+  }
+
+  if (currentLines.length) {
+    pages.push(currentLines.join("\n"));
+  }
+
+  return pages.length ? pages : [""];
+};
+const renderInventoryHUD = () => {
+  const hud = getElement("inventoryHUD");
+
+  if (!hud) return;
+
+  hud.replaceChildren();
+
+  const inventory = game.inventory || [];
+
+  hud.hidden = game.mode !== "play" || inventory.length === 0;
+
+  if (hud.hidden) {
+    inventoryExpanded = false;
+    return;
+  }
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "inventory-toggle";
+  toggle.setAttribute("aria-expanded", String(inventoryExpanded));
+  toggle.title = "Show or hide collected items";
+
+  const icon = document.createElement("span");
+  icon.textContent = "🎒";
+
+  const label = document.createElement("span");
+  label.textContent = "KEY ITEMS";
+
+  const count = document.createElement("span");
+  count.className = "inventory-count";
+  count.textContent = inventory.length;
+
+  const arrow = document.createElement("span");
+  arrow.textContent = inventoryExpanded ? "−" : "+";
+
+  toggle.append(icon, label, count, arrow);
+
+  toggle.addEventListener("click", () => {
+    inventoryExpanded = !inventoryExpanded;
+    renderInventoryHUD();
+  });
+
+  hud.appendChild(toggle);
+
+  if (!inventoryExpanded) return;
+
+  const list = document.createElement("div");
+  list.className = "inventory-list";
+
+  inventory.forEach(itemId => {
+    const item = QUEST_ITEMS[itemId];
+
+    if (!item) return;
+
+    const slot = document.createElement("div");
+    slot.className = "inventory-item";
+
+    const itemIcon = document.createElement("span");
+    itemIcon.className = "inventory-item-icon";
+    itemIcon.textContent = item.icon;
+
+    const name = document.createElement("span");
+    name.className = "inventory-item-name";
+    name.textContent = item.name;
+
+    slot.append(itemIcon, name);
+    list.appendChild(slot);
+  });
+
+  hud.appendChild(list);
+};
+
+
+
+
+const showLeaderboard = async () => {
+  closeDialogue(true);
+
+  game.mode = "leaderboard";
+  showScreen("leaderboard");
+
+  const podium = getElement("leaderboardPodium");
+  const list = getElement("leaderboardList");
+
+  if (!podium || !list) return;
+
+  podium.textContent = "LOADING RECORDS...";
+  list.replaceChildren();
+
+  try {
+    const entries = await fetchLeaderboard();
+
+    podium.replaceChildren();
+    list.replaceChildren();
+
+    if (!entries.length) {
+      podium.textContent = "NO RECORDS YET. BE THE FIRST HERO!";
+      return;
+    }
+
+    const podiumOrder = [
+      { index: 1, medal: "🥈" },
+      { index: 0, medal: "🥇" },
+      { index: 2, medal: "🥉" }
+    ];
+
+    podiumOrder.forEach(({ index, medal }) => {
+      const entry = entries[index];
+
+      if (!entry) return;
+
+      const rank = index + 1;
+
+      const place = document.createElement("div");
+      place.className = `podium-place rank-${rank}`;
+
+      const medalElement = document.createElement("div");
+      medalElement.className = "podium-medal";
+      medalElement.textContent = medal;
+
+      const name = document.createElement("div");
+      name.className = "podium-name";
+      name.textContent = entry.name;
+
+      const score = document.createElement("div");
+      score.className = "podium-score";
+      score.textContent = Number(entry.score).toLocaleString();
+
+      const bar = document.createElement("div");
+      bar.className = "podium-bar";
+      bar.textContent = rank;
+
+      place.append(medalElement, name, score, bar);
+      podium.appendChild(place);
+    });
+
+    entries.slice(3).forEach((entry, index) => {
+      const row = document.createElement("div");
+      row.className = "leaderboard-row";
+
+      const rank = document.createElement("span");
+      rank.className = "leaderboard-rank";
+      rank.textContent = `#${index + 4}`;
+
+      const name = document.createElement("span");
+      name.className = "leaderboard-name";
+      name.textContent = entry.name;
+
+      const score = document.createElement("strong");
+      score.className = "leaderboard-score";
+      score.textContent = Number(entry.score).toLocaleString();
+
+      row.append(rank, name, score);
+      list.appendChild(row);
+    });
+
+  } catch (error) {
+    console.error("Leaderboard loading failed:", error);
+
+    podium.textContent = "";
+    list.textContent = "LEADERBOARD UNAVAILABLE.";
+  }
+};
+
+
 const startBossQuest = () => {
   if (
     !game.boss.unlocked ||
     game.boss.defeated ||
     game.boss.active
   ) return;
-
   clearQuestResult();
   closeDialogue();
 
@@ -115,6 +469,8 @@ const startBossQuest = () => {
 
   game.activeNPC = BOSS;
   game.mode = "boss";
+  document.body.classList.add("boss-fight-active");
+  setInputMode("guess");
 
   const art = getElement("gameArt");
 
@@ -151,6 +507,7 @@ const startBossQuest = () => {
 
   showScreen("quest");
   closeDialogue(true);
+    startBossMusic();
   startBossRound();
 };
 
@@ -195,6 +552,8 @@ const bossRoundWon = () => {
   successTimer = null;
 
   game.boss.hp--;
+  playHankAttackSound();
+playBossDamageSound();
 
   bossDamageAnimation();
 
@@ -218,15 +577,29 @@ const bossTimeout = () => {
   game.boss.timer = null;
 
   game.hearts = Math.max(0, game.hearts - 1);
+  playBossAttackSound();
 
   showToast("THE HANGMAN KING ATTACKS! -1 HEART");
-
   updateHUD();
+
+  const art = getElement("gameArt");
 
   if (game.hearts <= 0) {
     game.boss.active = false;
-    endGame(false);
+
+    if (art) {
+      poseHank(art, 6, "dead", "dead");
+    }
+
+    window.setTimeout(() => {
+      endGame(false);
+    }, 1300);
+
     return;
+  }
+
+  if (art) {
+    poseHank(art, 6, "panic", "hurt");
   }
 
   window.setTimeout(() => {
@@ -243,6 +616,7 @@ const defeatBoss = () => {
   game.boss.hp = 0;
   game.boss.active = false;
   game.boss.defeated = true;
+  playBossDefeatSound();
 
   game.activeNPC = null;
   game.boss.round = null;
@@ -276,7 +650,7 @@ const setVisible = (id, visible) => {
 };
 
 const showScreen = screenId => {
-  ["menu", "tut", "set", "pause", "quest", "end"].forEach(id => {
+  ["menu","name", "tut", "set", "pause", "quest", "leaderboard", "end"].forEach(id => {
     const element = getElement(id);
 
     if (!element) return;
@@ -369,6 +743,7 @@ const showToast = message => {
 };
 
 /* ---------- DIALOGUE ---------- */
+
 const say = (element, message) => {
   if (!element) return;
 
@@ -378,15 +753,19 @@ const say = (element, message) => {
   if (!textElement) return;
 
   let index = 0;
+  let soundCounter = 0;
+
+  const isBoss = dialogue.npc === BOSS;
+
   dialogue.typing = true;
   textElement.textContent = "";
 
   const updateInstruction = () => {
-    if (!dialogue.bossIntroActive) return;
-
     const instruction = element.querySelector("i");
 
-    if (instruction) {
+    if (!instruction) return;
+
+    if (dialogue.bossIntroActive) {
       const lastLine =
         dialogue.bossIntroIndex >= BOSS.introLines.length - 1;
 
@@ -395,7 +774,20 @@ const say = (element, message) => {
         : lastLine
           ? "E · BEGIN THE BATTLE"
           : "E · CONTINUE";
+
+      return;
     }
+
+    const lastMessage =
+      dialogue.messageIndex >= dialogue.messages.length - 1;
+
+    instruction.textContent = dialogue.typing
+      ? "SPEAKING..."
+      : lastMessage
+        ? dialogue.afterSequence === "startQuest"
+          ? "E · TAKE THE QUEST"
+          : "E · CLOSE"
+        : "E · CONTINUE";
   };
 
   const finishTyping = () => {
@@ -412,43 +804,104 @@ const say = (element, message) => {
   }
 
   dialogue.typingTimer = window.setInterval(() => {
+    const character = message[index];
+
     textElement.textContent = message.slice(0, ++index);
+
+    if (/[a-z0-9]/i.test(character)) {
+      soundCounter++;
+
+      const interval = isBoss ? 3 : 2;
+
+      if (soundCounter % interval === 0) {
+        playDialogueBlip(isBoss, character);
+      }
+    }
 
     if (index >= message.length) {
       finishTyping();
     }
-  }, 22);
+  }, 35);
 
   updateInstruction();
 };
+const openNPCQuestDialogue = npc => {
+  let messages = [];
+  let action = "close";
 
-const openDialogue = (npc, message) => {
+  if (completedNPCNames.has(npc.name)) {
+    messages = [npc.done || "Thank you for helping me!"];
+  } else if (!npc.requiresItems?.length) {
+    messages = [npc.intro];
+    action = "startQuest";
+  } else if (!hasQuestItem(npc)) {
+    messages = [
+      npc.intro,
+      npc.lockedDialogue || npc.requiredDialogue || "I still need an item before we can continue."
+    ];
+  } else {
+    messages = [
+      npc.intro,
+      npc.readyDialogue || "Wonderful! Let's get started!"
+    ];
+    action = "startQuest";
+  }
+
+  openDialogue(npc, messages, action);
+};
+const openDialogue = (npc, messages, afterSequence = "close") => {
   const element = getElement("dlg");
-
   if (!element) return;
-
-  dialogue.npc = npc;
 
   element.style.display = "block";
   element.hidden = false;
 
+  dialogue.npc = npc;
+
+  dialogue.messages = splitDialoguePages(
+    element,
+    Array.isArray(messages) ? messages : [messages],
+    2
+  );
+
+  dialogue.messageIndex = 0;
+  dialogue.afterSequence = afterSequence;
+
   const name = element.querySelector("b");
-  const instruction = element.querySelector("i");
 
   if (name) {
     name.textContent = npc.name;
   }
 
-  if (instruction) {
-  instruction.textContent =
-    npc === BOSS
-      ? "E · Begin the battle     Esc · Later"
-      : npc.state === 2
-        ? "E · Chat     Esc · Close"
-        : "E · Take the quest     Esc · Later";
-}
-  say(element, message);
-};const closeDialogue = (force = false) => {
+  say(element, dialogue.messages[0]);
+};
+const advanceNPCDialogue = () => {
+  if (!dialogue.npc || dialogue.npc === BOSS) return;
+
+  if (dialogue.typing) return;
+
+  if (dialogue.messageIndex < dialogue.messages.length - 1) {
+    dialogue.messageIndex++;
+
+    say(
+      getElement("dlg"),
+      dialogue.messages[dialogue.messageIndex]
+    );
+
+    return;
+  }
+
+  const npc = dialogue.npc;
+  const action = dialogue.afterSequence;
+
+  closeDialogue(true);
+
+  if (action === "startQuest") {
+    startQuest(npc);
+  }
+};
+
+const closeDialogue = (force = false) => {
   if (
     !force &&
     (
@@ -464,6 +917,9 @@ const openDialogue = (npc, message) => {
   dialogue.npc = null;
   dialogue.bossIntroActive = false;
   dialogue.bossIntroIndex = 0;
+  dialogue.messages = [];
+  dialogue.messageIndex = 0;
+  dialogue.afterSequence = "close";
 
   const element = getElement("dlg");
 
@@ -472,10 +928,11 @@ const openDialogue = (npc, message) => {
     element.hidden = true;
   }
 };
+
 const openBossIntro = () => {
   dialogue.bossIntroActive = true;
   dialogue.bossIntroIndex = 0;
-
+playBossDialogueSound();
   openDialogue(BOSS, BOSS.introLines[0]);
 
   const element = getElement("dlg");
@@ -494,7 +951,7 @@ const advanceBossIntro = () => {
 
   if (!lastLine) {
     dialogue.bossIntroIndex++;
-
+  playBossDialogueSound();
     const element = getElement("dlg");
 
     say(
@@ -545,7 +1002,7 @@ const interact = () => {
     advanceBossIntro();
     return;
   }
-if (dialogue.npc && dialogue.typing) return;
+
   const npc = getNearestNPC();
 
   if (!npc) {
@@ -559,26 +1016,33 @@ if (dialogue.npc && dialogue.typing) return;
     return;
   }
 
-  if (dialogue.npc === npc && npc.state !== 2) {
-    closeDialogue();
-    startQuest(npc);
+  if (dialogue.npc === npc) {
+    advanceNPCDialogue();
     return;
   }
 
-  let message;
-
-  if (npc.state === 2) {
-    message = npc.done;
-  } else if (npc.failed) {
-    message = "Hank's back on the rope! Try a fresh word?";
-  } else if (npc.round) {
-    message = "Ready to get back to Hank?";
-  } else {
-    message = npc.intro;
+  if (dialogue.npc) {
+    closeDialogue(true);
   }
 
-  openDialogue(npc, message);
-};const updateDialogueDistance = () => {
+  let action = "close";
+
+if (
+  npc.state !== 2 &&
+  (npc.failed || npc.round || hasQuestItem(npc))
+) {
+  action = "startQuest";
+}
+
+const hasSeenIntro = npcIntroSeen.has(npc.name);
+const messages = getQuestDialogue(npc, hasSeenIntro);
+
+npcIntroSeen.add(npc.name);
+
+openDialogue(npc, messages, action);
+};
+
+const updateDialogueDistance = () => {
   if (!dialogue.npc || !game.player) return;
 
   if (dialogue.typing || dialogue.bossIntroActive) return;
@@ -603,7 +1067,8 @@ const renderQuest = () => {
 
   if (!npc || !Round.s) return;
 
-  const who = getElement("qWho");
+ const who = getElement("qWho");
+  const category = getElement("qCategory");
   const clue = getElement("qClue");
   const word = getElement("word");
   const keys = getElement("keys");
@@ -630,17 +1095,19 @@ const renderQuest = () => {
 
   const isBoss = npc === BOSS;
 
-if (who) {
-  who.textContent = isBoss
-    ? `${BOSS.name} · ${game.boss.hp}/${BOSS.maxHP} HP`
-    : npc.goal || npc.name;
-}
+  if (who) {
+    who.textContent = isBoss
+      ? `${BOSS.name} · ${game.boss.hp}/${BOSS.maxHP} HP`
+      : npc.goal || npc.name;
+  }
 
-if (clue) {
-  clue.textContent = isBoss
-    ? `${Round.s.clue} · ${Round.s.word.length} letters · ${game.boss.timeLeft}s`
-    : `${Round.s.clue} · ${Round.s.word.length} letters`;
-}
+  if (category) {
+    category.textContent = Round.s.category || npc.cat || "UNKNOWN";
+  }
+
+  if (clue) {
+    clue.textContent = Round.s.clue || "No clue available.";
+  }
 
 if (isBoss) {
   const hpFill = getElement("bossHPFill");
@@ -792,17 +1259,25 @@ if (hintButton) {
 }
   // Update Hank's appearance
   const art = getElement("gameArt");
+const hankState = isBoss
+  ? won
+    ? "attack"
+    : lost
+      ? "dead"
+      : ""
+  : won
+    ? "free"
+    : lost
+      ? "dead"
+      : "";
 
-  if (art) {
    poseHank(
       art,
       won ? 6 : Round.s.misses,
       won ? "happy" : MOOD[Round.s.misses],
-      game.mode === "boss"
-        ? ""
-        : won ? "free" : lost ? "dead" : ""
+      hankState
     );
-  }
+  
 
   // Display the result after Hank's animation
 if (lost && game.mode == "quest" && resultRoundId !== roundId) {
@@ -886,6 +1361,8 @@ const completeQuest = () => {
   // Release the captive
   npc.ft = performance.now() / 1000;
   completeNPCQuest(npc);
+  completedNPCNames.add(npc.name);
+  const rewardItem = grantQuestItem(npc.rewardItem);
 
   const allQuestsDone = areAllQuestsComplete();
 
@@ -909,9 +1386,13 @@ const completeQuest = () => {
     24
   );
 
-  showToast(
-    `${npc.free} +${points} points +5 candies +1 key`
-  );
+  const itemMessage = rewardItem
+  ? ` RECEIVED ${rewardItem.icon} ${rewardItem.name}!`
+  : "";
+
+showToast(
+  `${npc.free} +${points} points +5 candies +1 key.${itemMessage}`
+);
 
   // Clear the completed round
   npc.round = null;
@@ -925,7 +1406,8 @@ const completeQuest = () => {
   Round.s = null;
   game.activeNPC = null;
   game.mode = "play";
-
+  setInputMode("world");
+renderInventoryHUD();
   showScreen(null);
   updateHUD();
 
@@ -977,8 +1459,12 @@ const clearQuestResult = () => {
 };
 
 const startQuest = (npc, fresh = false) => {
-  if (!npc) return;
-
+  if (
+    completedNPCNames.has(npc.name) ||
+    !hasQuestItem(npc)
+  ) {
+    return;
+  }
   if (npc.state === 2) {
     openDialogue(npc, npc.done);
     return;
@@ -995,6 +1481,7 @@ const startQuest = (npc, fresh = false) => {
   Round.s = npc.round;
   npc.failed = false;
   game.mode = "quest";
+  setInputMode("guess");
 
   const art = getElement("gameArt");
 
@@ -1023,6 +1510,13 @@ art.innerHTML = hankSVG();
 
 const closeQuest = () => {
   if (game.mode !== "quest") return;
+  if (
+  game.mode === "boss" ||
+  game.boss.active ||
+  game.activeNPC === BOSS
+) {
+  return;
+}
 
   const npc = game.activeNPC;
 
@@ -1033,6 +1527,7 @@ const closeQuest = () => {
   clearQuestResult();
 
   game.mode = "play";
+  setInputMode("world");
   game.activeNPC = null;
   Round.s = null;
 
@@ -1062,6 +1557,7 @@ const failQuest = () => {
   updateHUD();
 };
 const handleGuess = letter => {
+  unlockAudio();
   const isBoss = game.mode === "boss";
 
   if (
@@ -1140,6 +1636,7 @@ const useHint = () => {
   if (isBoss) {
   if ((Round.s.hintsUsed || 0) >= 1) {
        showToast("You already used your free hint!");
+       playBossHintSound();
       return;
     }
 
@@ -1187,6 +1684,42 @@ const useHint = () => {
   }
 };
 /* ---------- GAME FLOW ---------- */
+const showNameEntry = () => {
+  closeDialogue(true);
+
+  game.mode = "name";
+  game.playerName = "";
+
+  const input = getElement("playerNameInput");
+  const error = getElement("nameError");
+
+  if (input) input.value = "";
+  if (error) error.textContent = "";
+
+  showScreen("name");
+
+  window.setTimeout(() => input?.focus(), 100);
+};
+const confirmPlayerName = () => {
+  const input = getElement("playerNameInput");
+  const error = getElement("nameError");
+
+  const name = input?.value
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, 16);
+
+  if (!name) {
+    if (error) error.textContent = "PLEASE ENTER YOUR NAME!";
+    return;
+  }
+
+  game.playerName = name;
+
+  localStorage.setItem("hangmanPlayerName", name);
+
+  startTutorial();
+};
 
 const startTutorial = () => {
   closeDialogue();
@@ -1196,6 +1729,7 @@ const startTutorial = () => {
 
 const startNewGame = () => {
   window.clearTimeout(questFinishTimer);
+  document.body.classList.remove("boss-fight-active");
 
   initializeProgression();
 
@@ -1209,7 +1743,7 @@ const startNewGame = () => {
   game.completed = 0;
   game.elapsedTime = 0;
   game.activeNPC = null;
-
+  game.inventory = [];
     clearInterval(game.boss.timer);
 
   game.boss.unlocked = false;
@@ -1225,9 +1759,16 @@ game.boss.revealed = false;
 game.boss.revealStartedAt = null;
 game.boss.revealCutsceneActive = false;
 game.boss.cameraPanFrom = null;
+game.boss.landingSoundPlayed = false;
 game.boss.cameraPanTarget = null;
+stopBossMusic();
+startGameMusic();
+npcIntroSeen.clear();
+completedNPCNames.clear();
 
   game.mode = "play";
+  renderInventoryHUD();
+  setInputMode("world");
 
   Round.s = null;
 
@@ -1255,8 +1796,12 @@ const pauseGame = () => {
 
 const endGame = victory => {
   if (game.mode === "end") return;
-
+  document.body.classList.remove("boss-fight-active");
+if (!victory) {
+  playGameOverSound();
+}
   game.mode = "end";
+  stopBossMusic();
   clearInterval(game.boss.timer);
 game.boss.timer = null;
 game.boss.active = false;
@@ -1281,6 +1826,12 @@ game.boss.active = false;
     : levelScore;
 
   game.score = total;
+  submitLeaderboardScore(
+  game.playerName || "Player",
+  total
+).catch(error => {
+  console.error("Leaderboard save failed:", error);
+});
 
   if (total > game.bestScore) {
     saveBestScore(total);
@@ -1390,6 +1941,8 @@ game.boss.active = false;
   });
 
   showScreen("end");
+  stopGameMusic();
+stopBossMusic();
 };
 
 const showMenu = () => {
@@ -1414,11 +1967,29 @@ const showMenu = () => {
 /* ---------- ACTIONS ---------- */
 
 const handleAction = action => {
+  if (
+  action === "escape" &&
+  (
+    game.mode === "boss" ||
+    game.boss.active ||
+    game.activeNPC === BOSS
+  )
+) {
+  return;
+}
+  unlockAudio();
   switch (action) {
-    case "start":
-      startTutorial();
-      break;
+   case "start":
+  showNameEntry();
+  break;
 
+  case "nameContinue":
+    confirmPlayerName();
+    break;
+
+  case "nameBack":
+    showMenu();
+    break;
     case "go":
     case "retry":
       startNewGame();
@@ -1427,6 +1998,18 @@ const handleAction = action => {
     case "interact":
       interact();
       break;
+
+      case "leaderboard":
+      showLeaderboard();
+      break;
+
+    case "leaderboardBack":
+      showMenu();
+      break;
+
+case "leaderboardExport":
+  downloadLeaderboard();
+  break;
 
     case "later":
       if (game.mode === "quest" && Round.s && !Round.over()) {
@@ -1472,9 +2055,8 @@ const handleAction = action => {
       break;
 
     case "tsound":
-      game.settings.sound = !game.settings.sound;
-      setSoundEnabled(game.settings.sound);
-      saveSettings(game.settings);
+       setSoundEnabled(true);
+  showToast("SOUND IS ALWAYS ON!");
       break;
 
     case "tscan":
@@ -1560,7 +2142,8 @@ const renderGame = time => {
     game.boss.revealed = true;
     game.boss.revealStartedAt = time;
     game.boss.revealCutsceneActive = true;
-
+    game.boss.landingSoundPlayed = false;
+    playBossEntranceSound();
     game.boss.cameraPanFrom = camera.x;
 
     const maxCameraX = Math.max(0, WORLD_WIDTH - CANVAS_WIDTH);
@@ -1583,10 +2166,13 @@ const renderGame = time => {
   if (
     game.boss.revealed &&
     game.boss.cameraPanFrom !== null &&
-    revealElapsed < 2800
+    revealElapsed < 2800 &&  !game.boss.landingSoundPlayed
+
   ) {
     const progress = Math.min(1, revealElapsed / 1300);
     const eased = progress * progress * (3 - 2 * progress);
+      game.boss.landingSoundPlayed = true;
+     playBossLandSound();
 
     camera.x =
       game.boss.cameraPanFrom +
@@ -1601,15 +2187,11 @@ const renderGame = time => {
     ? Math.min(1, revealElapsed / 1500)
     : 0;
 
-  // Keep night colors vibrant instead of completely darkening the map
-  const night = game.boss.revealed
-    ? Math.min(0.68, (revealElapsed / 2400) * 0.68)
-    : 0;
+  
 
   drawEnvironment({
     coins: game.coinPickups,
     time: time / 1000,
-    night
   });
 
   drawCaptives(time / 1000);
@@ -1670,6 +2252,7 @@ const connectEvents = () => {
 /* ---------- INITIALIZATION ---------- */
 
 export const initializeGame = () => {
+  setSoundEnabled(true);
   initializeCanvas();
   initializeProgression();
   initializeInput();
@@ -1681,11 +2264,10 @@ export const initializeGame = () => {
     poseHank(menuArt, 6, "cool");
   }
 
-  game.settings = loadSettings();
-  game.bestScore = loadBestScore();
+game.settings = loadSettings() || {};
+game.bestScore = loadBestScore();
 
-  setSoundEnabled(game.settings.sound);
-
+setSoundEnabled(true);
   document.body.classList.toggle(
     "noscan",
     !game.settings.scan

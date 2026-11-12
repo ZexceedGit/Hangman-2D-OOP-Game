@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="./style/SpeechBubble.css"> <!-- HUD Menu Design -->
     <link rel="stylesheet" href="./style/Hangman.css"> <!-- HUD Menu Design -->
     <link rel="stylesheet" href="./style/ResultPanel.css" > <!--End game modeal-->
+    <link rel="stylesheet" href="./style//Animation.css">
 </head>
 <body>
     
@@ -71,6 +72,8 @@
                 ♥ ×<b id="hH">3</b>
             </div>
         </div>
+
+        <div id="inventoryHUD" class="inventory-hud" hidden></div>
 
         <!-- Pause button -->
         <button
@@ -133,17 +136,20 @@
                 >
                     START GAME
                 </button>
+                <button type="button" data-act="leaderboard">
+                LEADERBOARD
+                </button>
 
-                <button
+                <!-- <button
                     class="menu-secondary-button"
                     data-act="settings"
                 >
                     SETTINGS
-                </button>
+                </button> -->
 
-                <div class="menu-best-score">
+                <!-- <div class="menu-best-score">
                     BEST SCORE <b id="bestTxt">000000</b>
-                </div>
+                </div> -->
 
                 <div class="menu-footer">
                     Press <kbd>Enter</kbd> to begin
@@ -164,7 +170,7 @@
                 <h2 id="setH">SETTINGS</h2>
 
                 <div class="settings-options">
-                    <button data-act="tsound">
+                    <button>
                         Sound effects
                         <b id="vSound">ON</b>
                     </button>
@@ -195,6 +201,70 @@
                 </div>
             </div>
         </section>
+
+   
+<section id="name" class="screen-view">
+  <div class="name-card">
+
+    <h2>WHO'S PLAYING?</h2>
+
+    <p>Enter your group name to start the game.</p>
+
+    <label for="playerNameInput">GROUP NAME</label>
+
+    <input
+      type="text"
+      id="playerNameInput"
+      maxlength="16"
+      autocomplete="off"
+      placeholder="Your group name"
+    />
+
+    <span id="nameError"></span>
+
+    <div class="name-actions">
+      <button type="button" data-act="nameBack">
+        BACK
+      </button>
+
+      <button type="button" data-act="nameContinue">
+        START GAME →
+      </button>
+    </div>
+
+    <div class="name-footer">
+      SCORE SAVED TO THIS BROWSER'S LEADERBOARD
+    </div>
+
+  </div>
+</section>
+
+<section id="leaderboard" class="screen-view">
+  <div class="leaderboard-card">
+
+    <div class="name-top-label">TOWN RECORDS</div>
+
+    <h2>HALL OF HEROES</h2>
+
+    <p>THE TOWN'S GREATEST PLAYERS</p>
+      <div id="leaderboardPodium" class="leaderboard-podium"></div>
+
+    <div id="leaderboardList" class="leaderboard-list">
+      LOADING RECORDS...
+    </div>
+
+    <div class="leaderboard-actions">
+      <button type="button" data-act="leaderboardExport">
+        EXPORT TXT
+      </button>
+
+      <button type="button" data-act="leaderboardBack">
+        BACK TO MENU
+      </button>
+    </div>
+
+  </div>
+</section>
 
         <!-- ==============================
              PAUSE MENU
@@ -365,7 +435,7 @@
                 <span class="status-chip" id="qWho"></span>
 
                 <span class="status-chip">
-                    Clue: <b id="qClue"></b>
+                    Category: <b id="qCategory"></b>
                 </span>
 
                 <span class="status-chip">
@@ -395,6 +465,11 @@
                 </div>
 
                 <div class="word-area">
+
+                     <div class="quest-clue">
+                    <span class="clue-label">CLUE</span>
+                    <p id="qClue"></p>
+                    </div>
                     <div class="word-letters" id="word"></div>
 
                     <button
