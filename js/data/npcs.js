@@ -257,7 +257,7 @@ export const BOSS = {
   "But watching you... made me realize something. I've kept this town trapped in the past for far too long.",
   "I told myself I was preserving their lives, but all I really did was prevent them from moving on.",
   "Perhaps this is fate. Perhaps you were meant to find this place... and bring this long tragedy to an end.",
-  "There's only one way to break the spell. Its final magic is bound to three words.",
+  "There's only one way to break the spell. Its final magic is bound to five words.",
   "Solve them, and this town will finally be free. Everything I've recreated will fade, but perhaps that's how it was always meant to be.",
   "I have spent so long refusing to say goodbye. I think... I'm finally ready.",
   "Come, little hero. Help me end this."

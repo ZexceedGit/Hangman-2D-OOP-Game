@@ -1248,7 +1248,7 @@ if (hintButton) {
     const canPay = game.candies >= 5;
 
     hintButton.textContent = canPay
-      ? "Free hint (-5 candies)"
+      ? "Free hint (-15 candies)"
       : "Cheat code (costs 1 try)";
 
     hintButton.disabled =
@@ -1660,7 +1660,7 @@ const useHint = () => {
     return;
   }
 
-  const canPay = game.candies >= 5;
+  const canPay = game.candies >= 15;
   const letter = Round.hint(canPay);
 
   if (!letter) {
@@ -1669,7 +1669,7 @@ const useHint = () => {
   }
 
   if (canPay) {
-    game.candies -= 5;
+    game.candies -= 15;
   } else {
     playWrongSound();
   }
@@ -2249,9 +2249,11 @@ const connectEvents = () => {
   });
 };
 
-/* ---------- INITIALIZATION ---------- */
 
 export const initializeGame = () => {
+  game.boss.hp = BOSS.maxHP;
+  game.boss.maxHP = BOSS.maxHP;
+  game.boss.timeLeft = BOSS.timeLimit;
   setSoundEnabled(true);
   initializeCanvas();
   initializeProgression();
